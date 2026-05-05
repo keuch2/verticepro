@@ -1,0 +1,1 @@
+<?php $_GET['slug'] = 'legislacion'; require __DIR__ . '/seccion.php';

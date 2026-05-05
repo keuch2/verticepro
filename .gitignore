@@ -1,0 +1,10 @@
+includes/config.php
+logs/
+*.log
+.DS_Store
+.vscode/
+.idea/
+.claude/
+sql/
+AGENTS.md
+CLAUDE.md

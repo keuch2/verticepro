@@ -1,0 +1,1 @@
+<?php $_GET['slug'] = 'salud'; require __DIR__ . '/seccion.php';

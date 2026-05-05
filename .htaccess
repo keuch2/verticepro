@@ -1,0 +1,28 @@
+# Vértice Pro — rewrites y seguridad
+Options -Indexes
+DirectoryIndex index.php index.html
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # Bloquear acceso directo a carpetas sensibles
+    RewriteRule ^(includes|sql|logs)(/|$) - [F,L]
+
+    # URLs limpias para contenido
+    RewriteRule ^articulo/([a-z0-9-]+)/?$ articulo.php?slug=$1 [L,QSA]
+    RewriteRule ^perfil/([a-z0-9-]+)/?$ perfil.php?slug=$1 [L,QSA]
+    RewriteRule ^empresa/([a-z0-9-]+)/?$ empresa.php?slug=$1 [L,QSA]
+    RewriteRule ^oferta/([a-z0-9-]+)/?$ oferta.php?slug=$1 [L,QSA]
+    RewriteRule ^seccion/([a-z0-9-]+)/?$ seccion.php?slug=$1 [L,QSA]
+    RewriteRule ^publicacion/([a-z0-9-]+)/?$ publicacion.php?slug=$1 [L,QSA]
+
+    # Fallback: si existe un .php con el mismo nombre que la ruta limpia, úsalo
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteCond %{DOCUMENT_ROOT}%{REQUEST_URI}.php -f
+    RewriteRule ^(.*)$ $1.php [L]
+</IfModule>
+
+<FilesMatch "\.(sql|log|ini|md)$">
+    Require all denied
+</FilesMatch>

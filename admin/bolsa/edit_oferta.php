@@ -1,0 +1,64 @@
+<?php
+require_once __DIR__ . '/../_helpers.php';
+$id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
+$o = $id ? DB::one('SELECT * FROM job_offers WHERE id=?',[$id]) : null;
+$is_new = !$o;
+
+if ($_SERVER['REQUEST_METHOD']==='POST') {
+    csrf_check();
+    $data = [
+        'company_id' => post_int('company_id'),
+        'slug' => slugify(post('slug') ?: post('title')),
+        'title' => trim(post('title','')),
+        'description' => trim(post('description','')) ?: null,
+        'category' => trim(post('category','')) ?: null,
+        'modality' => post('modality') ?: null,
+        'country_id' => post_int('country_id'),
+        'salary_min' => post_int('salary_min'),
+        'salary_max' => post_int('salary_max'),
+        'published_at' => post('published_at') ?: null,
+        'status' => post('status','draft'),
+    ];
+    if (!$data['title'] || !$data['company_id']) { flash('err','Título y empresa requeridos'); redirect('/admin/bolsa/edit_oferta.php'.($id?"?id=$id":'')); }
+    if ($is_new) { $id = DB::insert('job_offers', $data); flash('ok','Oferta creada'); }
+    else         { DB::update('job_offers', $data, ['id'=>$id]); flash('ok','Oferta actualizada'); }
+    redirect('/admin/bolsa/edit_oferta.php?id='.$id);
+}
+if (isset($_GET['delete']) && $id) { csrf_check(); DB::delete('job_offers',['id'=>$id]); flash('ok','Eliminada'); redirect('/admin/bolsa/'); }
+
+$page_title = $is_new?'Nueva oferta':'Editar oferta';
+include __DIR__ . '/../_layout.php';
+?>
+<div class="toolbar">
+  <h1 style="margin:0;"><?= e($page_title) ?></h1>
+  <div>
+    <?php if (!$is_new): ?><a href="?id=<?= $id ?>&delete=1&csrf=<?= e(csrf_token()) ?>" class="btn danger" onclick="return confirm('¿Eliminar?')">Eliminar</a><?php endif; ?>
+    <a href="<?= e(u('/admin/bolsa/')) ?>" class="btn secondary">Volver</a>
+  </div>
+</div>
+<form method="post" class="card">
+  <input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>" />
+  <div class="form-grid">
+    <div><label>Título</label><input name="title" required value="<?= e($o['title']??'') ?>" /></div>
+    <div class="form-grid cols-2">
+      <div><label>Empresa</label><select name="company_id" required><option value="">—</option><?= opts(DB::all('SELECT id,name FROM companies ORDER BY name'),'id','name',$o['company_id']??null) ?></select></div>
+      <div><label>Slug</label><input name="slug" value="<?= e($o['slug']??'') ?>" /></div>
+    </div>
+    <div><label>Descripción</label><textarea name="description" rows="6"><?= e($o['description']??'') ?></textarea></div>
+    <div class="form-grid cols-2">
+      <div><label>Categoría</label><input name="category" value="<?= e($o['category']??'') ?>" /></div>
+      <div><label>Modalidad</label><select name="modality"><option value="">—</option><?php foreach (['presencial','remoto','hibrido'] as $m): ?><option value="<?= $m ?>" <?= ($o['modality']??'')===$m?'selected':'' ?>><?= $m ?></option><?php endforeach; ?></select></div>
+    </div>
+    <div class="form-grid cols-2">
+      <div><label>País</label><select name="country_id"><option value="">—</option><?= opts(SectionRepo::countries(),'id','name',$o['country_id']??null) ?></select></div>
+      <div><label>Estado</label><select name="status"><?php foreach (['draft','published','closed'] as $s): ?><option value="<?= $s ?>" <?= ($o['status']??'')===$s?'selected':'' ?>><?= $s ?></option><?php endforeach; ?></select></div>
+    </div>
+    <div class="form-grid cols-2">
+      <div><label>Salario min (€/año)</label><input type="number" name="salary_min" value="<?= e($o['salary_min']??'') ?>" /></div>
+      <div><label>Salario max (€/año)</label><input type="number" name="salary_max" value="<?= e($o['salary_max']??'') ?>" /></div>
+    </div>
+    <div><label>Fecha publicación</label><input type="datetime-local" name="published_at" value="<?= $o?date('Y-m-d\TH:i',strtotime($o['published_at']??'now')):'' ?>" /></div>
+    <button class="btn" type="submit"><?= $is_new?'Crear':'Guardar' ?></button>
+  </div>
+</form>
+<?php include __DIR__ . '/../_layout_end.php'; ?>

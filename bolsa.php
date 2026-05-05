@@ -1,0 +1,59 @@
+<?php
+require_once __DIR__ . '/includes/bootstrap.php';
+$offers = JobOfferRepo::all();
+$services = ServiceRepo::all();
+$page_title = 'Bolsa de Trabajo — Vértice Pro'; $page_active = 'bolsa.php';
+include __DIR__ . '/includes/header.php';
+?>
+  <section class="bg-gris-claro py-12 px-6">
+    <div class="max-w-7xl mx-auto">
+      <h1 class="text-3xl font-extrabold">Bolsa de Trabajo</h1>
+      <p class="text-gris-oscuro mt-2">Ofertas de empleo y servicios profesionales del sector.</p>
+    </div>
+  </section>
+
+  <section class="max-w-7xl mx-auto px-6 py-8">
+    <div class="flex gap-2 mb-8">
+      <button id="btn-ofertas" class="bg-azul text-white px-5 py-2 rounded text-sm font-semibold">Ofertas de empleo</button>
+      <button id="btn-servicios" class="bg-white border border-gray-300 text-gris-oscuro px-5 py-2 rounded text-sm font-semibold">Servicios profesionales</button>
+    </div>
+
+    <div id="ofertas-section" class="space-y-4">
+      <?php foreach ($offers as $o): ?>
+        <article class="bg-white rounded-lg border border-gray-200 p-5 flex flex-wrap gap-4 items-start hover:shadow-md transition">
+          <div class="flex-1 min-w-[250px]">
+            <h3 class="font-bold text-texto text-lg"><?= e($o['title']) ?></h3>
+            <p class="text-sm text-gris-oscuro mt-0.5"><?= e($o['company_name']) ?> · <?= e($o['country_name']) ?></p>
+            <p class="text-sm text-gris-oscuro mt-3 leading-relaxed"><?= e(mb_strimwidth($o['description'] ?? '', 0, 220, '…')) ?></p>
+          </div>
+          <div class="flex flex-col items-end gap-2">
+            <span class="text-xs px-2 py-0.5 rounded-full bg-orange-100 text-naranja font-semibold uppercase"><?= e($o['modality']) ?></span>
+            <span class="text-xs text-gris-oscuro"><?= e($o['category']) ?></span>
+            <?php if ($o['salary_min']): ?>
+              <span class="text-xs text-gris-oscuro"><?= number_format($o['salary_min']) ?> – <?= number_format($o['salary_max']) ?> €/año</span>
+            <?php endif; ?>
+            <a href="#" class="text-sm text-naranja font-semibold hover:underline mt-2">Postular →</a>
+          </div>
+        </article>
+      <?php endforeach; ?>
+    </div>
+
+    <div id="servicios-section" class="space-y-4" style="display:none;">
+      <?php foreach ($services as $s): ?>
+        <article class="bg-white rounded-lg border border-gray-200 p-5 flex flex-wrap gap-4 items-start hover:shadow-md transition">
+          <div class="flex-1 min-w-[250px]">
+            <h3 class="font-bold text-texto text-lg"><?= e($s['title']) ?></h3>
+            <p class="text-sm text-gris-oscuro mt-0.5">Ofrecido por <?= e($s['professional_name']) ?> · <?= e($s['country_name']) ?></p>
+            <p class="text-sm text-gris-oscuro mt-3 leading-relaxed"><?= e($s['description']) ?></p>
+          </div>
+          <div class="flex flex-col items-end gap-2">
+            <span class="text-xs px-2 py-0.5 rounded-full bg-blue-100 text-azul font-semibold uppercase"><?= e($s['modality']) ?></span>
+            <span class="text-xs text-gris-oscuro"><?= e($s['category']) ?></span>
+            <a href="<?= e(u('/perfil/' . $s['professional_slug'])) ?>" class="text-sm text-naranja font-semibold hover:underline mt-2">Ver perfil →</a>
+          </div>
+        </article>
+      <?php endforeach; ?>
+    </div>
+  </section>
+
+<?php include __DIR__ . '/includes/footer.php'; ?>
