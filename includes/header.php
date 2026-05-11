@@ -73,7 +73,7 @@ $c = $page_active;
         <?= nav_link(u('/bolsa'), 'Bolsa de Trabajo', 'bolsa.php', $c) ?>
       </nav>
       <div class="flex items-center gap-3">
-        <button class="bg-naranja text-white text-sm font-semibold px-4 py-2 rounded hover:bg-orange-600 transition duration-150">Newsletter</button>
+        <a href="<?= e(u('/registro')) ?>" class="hidden md:inline-flex bg-naranja text-white text-sm font-semibold px-4 py-2 rounded hover:bg-orange-600 transition duration-150">Únete a la red</a>
         <button id="mobile-menu-btn" aria-expanded="false" class="lg:hidden p-2 text-gris-oscuro hover:text-naranja transition">
           <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
         </button>
@@ -90,6 +90,9 @@ $c = $page_active;
       <div class="border-t border-gray-100 pt-2 mt-2">
         <?= m_nav_link(u('/red'), 'Red de Profesionales', 'red.php', $c) ?>
         <?= m_nav_link(u('/bolsa'), 'Bolsa de Trabajo', 'bolsa.php', $c) ?>
+      </div>
+      <div class="border-t border-gray-100 pt-3 mt-2">
+        <a href="<?= e(u('/registro')) ?>" class="block text-center bg-naranja text-white font-semibold px-4 py-2 rounded hover:bg-orange-600 transition">Únete a la red</a>
       </div>
     </div>
   </header>

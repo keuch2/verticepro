@@ -9,6 +9,7 @@ include __DIR__ . '/includes/header.php';
       <h1 class="text-4xl font-extrabold">Red de Profesionales de Iberoamérica</h1>
       <p class="text-lg mt-3 opacity-90 max-w-2xl">Conecta con consultores, auditores y expertos verificados en calidad, seguridad, salud ocupacional y medio ambiente.</p>
       <div class="flex flex-wrap gap-3 mt-6">
+        <a href="<?= e(u('/registro')) ?>" class="bg-naranja text-white font-semibold px-5 py-2 rounded hover:bg-orange-600 transition">Únete a la red</a>
         <a href="<?= e(u('/directorio')) ?>" class="bg-white text-azul font-semibold px-5 py-2 rounded hover:bg-blue-50">Explorar directorio</a>
         <a href="<?= e(u('/empresas')) ?>" class="border border-white text-white font-semibold px-5 py-2 rounded hover:bg-white hover:text-azul transition">Ver empresas</a>
       </div>
@@ -27,6 +28,14 @@ include __DIR__ . '/includes/header.php';
           <p class="text-xs text-gris-oscuro mt-1 leading-snug"><?= e($p['title']) ?></p>
         </a>
       <?php endforeach; ?>
+    </div>
+  </section>
+
+  <section class="bg-gris-claro py-12 px-6">
+    <div class="max-w-4xl mx-auto text-center">
+      <h2 class="text-2xl font-extrabold">¿Eres profesional del sector?</h2>
+      <p class="text-gris-oscuro mt-2">Crea tu perfil gratuito y aparece ante empresas y colegas de toda Iberoamérica. Las solicitudes se revisan antes de publicarse.</p>
+      <a href="<?= e(u('/registro')) ?>" class="inline-block mt-5 bg-naranja text-white font-semibold px-6 py-2.5 rounded hover:bg-orange-600 transition">Crear mi perfil profesional</a>
     </div>
   </section>
 

@@ -10,9 +10,12 @@ $page_active = 'directorio.php';
 include __DIR__ . '/includes/header.php';
 ?>
   <section class="bg-gris-claro py-12 px-6">
-    <div class="max-w-7xl mx-auto">
-      <h1 class="text-3xl font-extrabold text-texto">Directorio de Profesionales</h1>
-      <p class="text-gris-oscuro mt-2">Encuentra consultores, auditores y expertos verificados de Iberoamérica.</p>
+    <div class="max-w-7xl mx-auto flex flex-wrap items-end justify-between gap-4">
+      <div>
+        <h1 class="text-3xl font-extrabold text-texto">Directorio de Profesionales</h1>
+        <p class="text-gris-oscuro mt-2">Encuentra consultores, auditores y expertos verificados de Iberoamérica.</p>
+      </div>
+      <a href="<?= e(u('/registro')) ?>" class="bg-naranja text-white font-semibold px-5 py-2.5 rounded hover:bg-orange-600 transition">Únete a la red</a>
     </div>
   </section>
 
