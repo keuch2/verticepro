@@ -32,8 +32,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($rel) $data['avatar_image'] = $rel;
     }
 
+    $prev_status = $p['status'] ?? null;
     if ($is_new) { $id = DB::insert('professionals', $data); flash('ok','Profesional creado'); }
     else         { DB::update('professionals', $data, ['id'=>$id]); flash('ok','Profesional actualizado'); }
+
+    // Aprobación: notificar al profesional cuando pasa de pending → active
+    if (!$is_new && $prev_status === 'pending' && $data['status'] === 'active') {
+        $fresh = ProfessionalRepo::find($id);
+        if ($fresh) {
+            $link = u('/perfil/' . $fresh['slug']);
+            $title = '¡Tu perfil profesional fue aprobado!';
+            $body  = "Buenas noticias, " . $fresh['name'] . ". Tu perfil en la Red Vértice Pro acaba de ser aprobado y ya es visible en el directorio.";
+            if (!empty($fresh['user_id'])) {
+                Notify::create((int)$fresh['user_id'], 'profile_approved', $title, $body, $link, $fresh['email']);
+            } elseif (!empty($fresh['email'])) {
+                Notify::emailOnly($fresh['email'], $fresh['name'], (int)($fresh['notifications_opt_in'] ?? 1), $title, $body, $link);
+            }
+        }
+    }
 
     // Disciplinas
     DB::run('DELETE FROM professional_disciplines WHERE professional_id = ?', [$id]);

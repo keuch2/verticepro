@@ -39,14 +39,16 @@
         <h4 class="font-bold text-base mb-3">Legal</h4>
         <ul class="space-y-2 text-gray-300 text-sm">
           <li><a href="<?= e(u('/privacidad')) ?>" class="hover:text-naranja transition">Política de privacidad</a></li>
-          <li><a href="#" class="hover:text-naranja transition">Términos de uso</a></li>
-          <li><a href="#" class="hover:text-naranja transition">Cookies</a></li>
+          <li><a href="<?= e(u('/terminos')) ?>" class="hover:text-naranja transition">Términos y condiciones</a></li>
         </ul>
       </div>
     </div>
-    <div class="border-t border-gray-600 py-6 text-center text-gray-400 text-sm px-6">
-      <p class="italic">"La prevención, la sostenibilidad y el bienestar no son opcionales: son decisiones estratégicas."</p>
-      <p class="mt-2">© <?= date('Y') ?> Vértice Pro. Todos los derechos reservados.</p>
+    <div class="border-t border-gray-600 py-6 px-6 text-gray-400 text-sm">
+      <div class="max-w-7xl mx-auto space-y-2 text-center">
+        <p class="italic">"La prevención, la sostenibilidad y el bienestar no son opcionales: son decisiones estratégicas."</p>
+        <p class="text-xs opacity-80">Vértice Pro se reserva el derecho de modificar los <a href="<?= e(u('/terminos')) ?>" class="underline hover:text-naranja">términos y condiciones</a> del servicio en cualquier momento. Los cambios serán notificados con razonable antelación.</p>
+        <p>© <?= date('Y') ?> Vértice Pro. Todos los derechos reservados.</p>
+      </div>
     </div>
   </footer>
 

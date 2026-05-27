@@ -44,17 +44,22 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 });
 
-// 4. MULTI-AXIS FILTER SYSTEM (directorio.html & empresas.html)
-// Cards must have data-card attribute.
+// 4. MULTI-AXIS FILTER SYSTEM (directorio.php & empresas.php)
+// Cards must have data-card attribute. Each axis filter compared against data-<axis>.
+// Special axis "search" does a substring match (accent-insensitive) against data-search.
 // Pill button containers: data-filter-group="axis"
-// Individual pill buttons: data-filter="value"
-// Select elements: data-filter-axis="axis"
+// Individual pill buttons:  data-filter="value"
+// Select elements:           data-filter-axis="axis"
+// Inputs (search):           data-filter-axis="search"
+// Dependent select:          data-depends-on="<parentAxis>" — its <option> rows can carry
+//                            data-<parentAxis> to be hidden when not matching the parent.
 // Clear button: id="clear-filters"
 document.addEventListener('DOMContentLoaded', () => {
   const filterArea = document.getElementById('filter-area');
   if (!filterArea) return;
 
   const activeFilters = {};
+  const norm = (s) => (s || '').toString().toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu, '').trim();
 
   // Pill button groups
   const pillGroups = filterArea.querySelectorAll('[data-filter-group]');
@@ -82,9 +87,39 @@ document.addEventListener('DOMContentLoaded', () => {
     activeFilters[axis] = '';
     sel.addEventListener('change', () => {
       activeFilters[axis] = sel.value;
+      syncDependentSelects();
       applyFilters();
     });
   });
+
+  // Input (search) elements — also support data-filter-axis on <input> tags
+  filterArea.querySelectorAll('input[data-filter-axis]').forEach(inp => {
+    const axis = inp.getAttribute('data-filter-axis');
+    activeFilters[axis] = '';
+    inp.addEventListener('input', () => {
+      activeFilters[axis] = inp.value;
+      applyFilters();
+    });
+  });
+
+  // Hide options in dependent selects when their parent's value doesn't match.
+  function syncDependentSelects() {
+    filterArea.querySelectorAll('select[data-depends-on]').forEach(sel => {
+      const parentAxis = sel.getAttribute('data-depends-on');
+      const parentVal = activeFilters[parentAxis] || '';
+      let changed = false;
+      sel.querySelectorAll('option').forEach(opt => {
+        if (!opt.value) return; // keep "Todas las..."
+        const optParent = opt.getAttribute('data-' + parentAxis) || '';
+        const show = !parentVal || optParent === parentVal;
+        opt.hidden = !show;
+        if (!show && sel.value === opt.value) { sel.value = ''; changed = true; }
+      });
+      if (changed) {
+        activeFilters[sel.getAttribute('data-filter-axis')] = '';
+      }
+    });
+  }
 
   // Clear button
   const clearBtn = document.getElementById('clear-filters');
@@ -108,17 +143,32 @@ document.addEventListener('DOMContentLoaded', () => {
         sel.value = '';
         activeFilters[sel.getAttribute('data-filter-axis')] = '';
       });
+      filterArea.querySelectorAll('input[data-filter-axis]').forEach(inp => {
+        inp.value = '';
+        activeFilters[inp.getAttribute('data-filter-axis')] = '';
+      });
+      syncDependentSelects();
       applyFilters();
     });
   }
 
+  // Initial sync (in case page loaded with a preselected parent)
+  syncDependentSelects();
+
   function applyFilters() {
+    const searchTerm = norm(activeFilters['search'] || '');
     document.querySelectorAll('[data-card]').forEach(card => {
       let visible = true;
       for (const [axis, filterVal] of Object.entries(activeFilters)) {
         if (!filterVal || filterVal === 'todos') continue;
-        const cardVal = card.getAttribute('data-' + axis) || '';
-        if (cardVal !== filterVal) { visible = false; break; }
+        if (axis === 'search') {
+          if (!searchTerm) continue;
+          const haystack = norm(card.getAttribute('data-search') || '');
+          if (!haystack.includes(searchTerm)) { visible = false; break; }
+        } else {
+          const cardVal = card.getAttribute('data-' + axis) || '';
+          if (cardVal !== filterVal) { visible = false; break; }
+        }
       }
       if (visible) {
         card.style.display = '';
@@ -156,7 +206,20 @@ document.addEventListener('DOMContentLoaded', () => {
   btnServicios.addEventListener('click', () => activateTab(btnServicios, btnOfertas, serviciosSection, ofertasSection));
 });
 
-// 6. MOBILE MENU TOGGLE
+// 6. BOLSA — "Me interesa" toggle: expands the inline form for a specific offer.
+document.addEventListener('DOMContentLoaded', () => {
+  document.querySelectorAll('[data-interest-toggle]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const id = btn.getAttribute('data-interest-toggle');
+      const form = document.querySelector('[data-interest-form="' + id + '"]');
+      if (!form) return;
+      form.classList.toggle('hidden');
+      if (!form.classList.contains('hidden')) form.querySelector('input[name="name"]').focus();
+    });
+  });
+});
+
+// 7. MOBILE MENU TOGGLE
 document.addEventListener('DOMContentLoaded', () => {
   const menuBtn = document.getElementById('mobile-menu-btn');
   const mobileMenu = document.getElementById('mobile-menu');
