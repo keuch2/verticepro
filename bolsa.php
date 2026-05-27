@@ -1,10 +1,22 @@
 <?php
 require_once __DIR__ . '/includes/bootstrap.php';
+require_once __DIR__ . '/includes/auth_public.php';
 if (session_status() !== PHP_SESSION_ACTIVE) session_start();
 $offers = JobOfferRepo::all();
 $services = ServiceRepo::all();
 $flash_ok  = flash('bolsa_ok');
 $flash_err = flash('bolsa_err');
+
+// Usuario logueado (profesional): cargar ids de ofertas que ya marcó como interés.
+$current_user_ji = public_logged_in();
+$my_interest_ids = [];
+if ($current_user_ji && in_array($current_user_ji['role'], ['professional','admin','author'], true)) {
+    $my_interest_ids = array_map('intval', array_column(
+        DB::all('SELECT offer_id FROM job_interests WHERE user_id = ?', [(int)$current_user_ji['id']]),
+        'offer_id'
+    ));
+}
+
 $page_title = 'Bolsa de Trabajo — Vértice Pro'; $page_active = 'bolsa.php';
 include __DIR__ . '/includes/header.php';
 ?>
@@ -51,7 +63,18 @@ include __DIR__ . '/includes/header.php';
               <?php if ($o['salary_min']): ?>
                 <span class="text-xs text-gris-oscuro">Gs. <?= number_format($o['salary_min']) ?> – <?= number_format($o['salary_max']) ?></span>
               <?php endif; ?>
-              <button type="button" class="text-sm text-naranja font-semibold hover:underline mt-2" data-interest-toggle="<?= (int)$o['id'] ?>">Me interesa →</button>
+              <?php if ($current_user_ji): $marked = in_array((int)$o['id'], $my_interest_ids, true); ?>
+                <form method="post" action="<?= e(u('/bolsa-interes.php')) ?>" class="mt-2">
+                  <input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>" />
+                  <input type="hidden" name="offer_id" value="<?= (int)$o['id'] ?>" />
+                  <input type="hidden" name="action" value="<?= $marked ? 'unfavorite' : 'favorite' ?>" />
+                  <button class="text-sm font-semibold transition <?= $marked ? 'text-coral hover:text-red-700' : 'text-naranja hover:underline' ?>" type="submit" title="<?= $marked ? 'Quitar de mis intereses' : 'Marcar como de mi interés' ?>">
+                    <?= $marked ? '❤ En mis intereses' : '🤍 Me interesa →' ?>
+                  </button>
+                </form>
+              <?php else: ?>
+                <button type="button" class="text-sm text-naranja font-semibold hover:underline mt-2" data-interest-toggle="<?= (int)$o['id'] ?>">Me interesa →</button>
+              <?php endif; ?>
             </div>
           </div>
           <form method="post" action="<?= e(u('/bolsa-interes.php')) ?>" class="hidden mt-4 pt-4 border-t border-gray-200 grid grid-cols-1 md:grid-cols-3 gap-3 items-end" data-interest-form="<?= (int)$o['id'] ?>">

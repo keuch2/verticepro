@@ -26,8 +26,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($rel) $data['cover_image'] = $rel;
     }
 
+    $prev_status = $ev['status'] ?? null;
     if ($is_new) { $id = DB::insert('events', $data); flash('ok','Evento creado'); }
     else         { DB::update('events', $data, ['id'=>$id]); flash('ok','Evento actualizado'); }
+
+    // Si pasó de draft → published y hay proponer_email, avisamos.
+    if (!$is_new && $prev_status === 'draft' && $data['status'] === 'published') {
+        $fresh = DB::one('SELECT slug, title, proposer_name, proposer_email FROM events WHERE id = ?', [$id]);
+        if ($fresh && !empty($fresh['proposer_email']) && filter_var($fresh['proposer_email'], FILTER_VALIDATE_EMAIL)) {
+            Notify::emailOnly(
+                $fresh['proposer_email'],
+                (string)($fresh['proposer_name'] ?? ''),
+                1,
+                '¡Tu evento fue publicado en Vértice Pro!',
+                'Buenas noticias. El evento "' . $fresh['title'] . '" que propusiste ya está visible en el calendario de Vértice Pro.',
+                u('/eventos')
+            );
+        }
+    }
     redirect('/admin/eventos/edit.php?id=' . $id);
 }
 

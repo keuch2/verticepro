@@ -1,5 +1,8 @@
 <?php
 require_once __DIR__ . '/includes/bootstrap.php';
+if (session_status() !== PHP_SESSION_ACTIVE) session_start();
+$flash_ok  = flash('eventos_ok');
+$flash_err = flash('eventos_err');
 
 $year  = isset($_GET['year']) && ctype_digit((string)$_GET['year']) ? (int)$_GET['year'] : null;
 $month = isset($_GET['month']) && ctype_digit((string)$_GET['month']) && (int)$_GET['month'] >= 1 && (int)$_GET['month'] <= 12 ? (int)$_GET['month'] : null;
@@ -20,11 +23,21 @@ $page_active = 'eventos.php';
 include __DIR__ . '/includes/header.php';
 ?>
 <section class="bg-gris-claro py-12 px-6">
-  <div class="max-w-7xl mx-auto">
-    <h1 class="text-3xl font-extrabold">Calendario de Eventos</h1>
-    <p class="text-gris-oscuro mt-2">Conferencias, congresos, jornadas y formaciones del sector en Paraguay y la región.</p>
+  <div class="max-w-7xl mx-auto flex flex-wrap items-end justify-between gap-4">
+    <div>
+      <h1 class="text-3xl font-extrabold">Calendario de Eventos</h1>
+      <p class="text-gris-oscuro mt-2">Conferencias, congresos, jornadas y formaciones del sector en Paraguay y la región.</p>
+    </div>
+    <button type="button" onclick="document.getElementById('propose-event-modal').classList.remove('hidden')" class="bg-naranja text-white font-semibold px-5 py-2.5 rounded hover:bg-orange-600 transition">+ Proponer evento</button>
   </div>
 </section>
+
+<?php if ($flash_ok): ?>
+  <div class="max-w-7xl mx-auto px-6 mt-6"><div class="bg-verde/10 border border-verde rounded p-4 text-texto"><?= e($flash_ok) ?></div></div>
+<?php endif; ?>
+<?php if ($flash_err): ?>
+  <div class="max-w-7xl mx-auto px-6 mt-6"><div class="bg-red-50 border border-coral rounded p-4 text-coral"><?= e($flash_err) ?></div></div>
+<?php endif; ?>
 
 <section class="max-w-7xl mx-auto px-6 py-8">
   <form method="get" class="flex flex-wrap gap-3 items-end bg-white border border-gray-200 rounded p-4 mb-6">
@@ -95,5 +108,79 @@ include __DIR__ . '/includes/header.php';
     </div>
   <?php endif; ?>
 </section>
+
+<!-- Modal: Proponer evento -->
+<div id="propose-event-modal" class="hidden fixed inset-0 z-[100] flex items-center justify-center p-4" style="background:rgba(0,0,0,0.5);">
+  <div class="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+    <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+      <h2 class="text-xl font-extrabold">Proponer un evento</h2>
+      <button type="button" onclick="document.getElementById('propose-event-modal').classList.add('hidden')" class="text-gris-oscuro hover:text-coral text-2xl leading-none">×</button>
+    </div>
+    <form method="post" action="<?= e(u('/eventos-proponer.php')) ?>" class="p-6 space-y-4">
+      <input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>" />
+      <p class="text-sm text-gris-oscuro">Tu evento quedará pendiente de revisión. Nuestro equipo lo revisará y, si corresponde, lo publicará en el calendario.</p>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label class="block text-sm font-semibold mb-1">Tu nombre *</label>
+          <input name="proposer_name" type="text" required class="w-full border border-gray-300 rounded px-3 py-2" />
+        </div>
+        <div>
+          <label class="block text-sm font-semibold mb-1">Tu email *</label>
+          <input name="proposer_email" type="email" required class="w-full border border-gray-300 rounded px-3 py-2" />
+        </div>
+      </div>
+      <div>
+        <label class="block text-sm font-semibold mb-1">Título del evento *</label>
+        <input name="title" required class="w-full border border-gray-300 rounded px-3 py-2" />
+      </div>
+      <div>
+        <label class="block text-sm font-semibold mb-1">Descripción</label>
+        <textarea name="description" rows="3" class="w-full border border-gray-300 rounded px-3 py-2"></textarea>
+      </div>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label class="block text-sm font-semibold mb-1">Fecha y hora *</label>
+          <input name="starts_at" type="datetime-local" required class="w-full border border-gray-300 rounded px-3 py-2" />
+        </div>
+        <div>
+          <label class="block text-sm font-semibold mb-1">Finaliza (opcional)</label>
+          <input name="ends_at" type="datetime-local" class="w-full border border-gray-300 rounded px-3 py-2" />
+        </div>
+      </div>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label class="block text-sm font-semibold mb-1">Modalidad</label>
+          <select name="modality" class="w-full border border-gray-300 rounded px-3 py-2 bg-white">
+            <option value="">—</option>
+            <?php foreach (['presencial','virtual','hibrido'] as $m): ?>
+              <option value="<?= $m ?>"><?= ucfirst($m) ?></option>
+            <?php endforeach; ?>
+          </select>
+        </div>
+        <div>
+          <label class="block text-sm font-semibold mb-1">Disciplina</label>
+          <select name="discipline_id" class="w-full border border-gray-300 rounded px-3 py-2 bg-white">
+            <option value="">—</option>
+            <?php foreach ($disciplines as $d): ?>
+              <option value="<?= (int)$d['id'] ?>"><?= e($d['name']) ?></option>
+            <?php endforeach; ?>
+          </select>
+        </div>
+      </div>
+      <div>
+        <label class="block text-sm font-semibold mb-1">Ubicación</label>
+        <input name="location" placeholder="Asunción — Centro de Convenciones" class="w-full border border-gray-300 rounded px-3 py-2" />
+      </div>
+      <div>
+        <label class="block text-sm font-semibold mb-1">URL externa (web del evento, opcional)</label>
+        <input name="url" type="url" placeholder="https://..." class="w-full border border-gray-300 rounded px-3 py-2" />
+      </div>
+      <div class="flex items-center justify-end gap-3 pt-4 border-t border-gray-200">
+        <button type="button" onclick="document.getElementById('propose-event-modal').classList.add('hidden')" class="text-gris-oscuro hover:text-coral text-sm">Cancelar</button>
+        <button class="bg-naranja text-white font-semibold px-6 py-2.5 rounded hover:bg-orange-600 transition" type="submit">Enviar para revisión</button>
+      </div>
+    </form>
+  </div>
+</div>
 
 <?php include __DIR__ . '/includes/footer.php'; ?>

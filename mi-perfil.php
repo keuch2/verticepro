@@ -23,7 +23,7 @@ if (!$p) {
 }
 
 $tab = $_GET['tab'] ?? 'datos';
-$valid_tabs = ['datos', 'disciplinas', 'formacion', 'experiencia', 'servicios', 'password'];
+$valid_tabs = ['datos', 'disciplinas', 'formacion', 'experiencia', 'servicios', 'intereses', 'password'];
 if (!in_array($tab, $valid_tabs, true)) $tab = 'datos';
 
 $ok = null;
@@ -154,6 +154,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $tab = 'servicios';
                 break;
 
+            case 'remove_interest':
+                $oid = (int)($_POST['offer_id'] ?? 0);
+                if ($oid > 0) {
+                    DB::run('DELETE FROM job_interests WHERE offer_id = ? AND user_id = ?', [$oid, (int)$u['id']]);
+                    $ok = 'Oferta quitada de tus intereses.';
+                }
+                $tab = 'intereses';
+                break;
+
             case 'save_password':
                 $cur = $_POST['current_password'] ?? '';
                 $pw1 = $_POST['new_password'] ?? '';
@@ -183,6 +192,16 @@ $current_spec = ProfessionalRepo::specialties((int)$p['id']);
 $formacion    = ProfessionalRepo::formation((int)$p['id']);
 $experiencia  = ProfessionalRepo::experience((int)$p['id']);
 $servicios    = ProfessionalRepo::services((int)$p['id']);
+$intereses    = DB::all(
+    'SELECT i.*, j.title, j.modality, j.category, j.flyer_image, j.status AS offer_status, j.slug AS offer_slug,
+            c.name AS company_name, c.slug AS company_slug
+     FROM job_interests i
+     JOIN job_offers j ON j.id = i.offer_id
+     JOIN companies c  ON c.id = j.company_id
+     WHERE i.user_id = ?
+     ORDER BY i.created_at DESC',
+    [(int)$u['id']]
+);
 
 $page_title = 'Mi perfil — Vértice Pro';
 $page_active = 'mi-perfil.php';
@@ -220,6 +239,7 @@ function tab_link(string $t, string $current, string $label, ?int $count = null)
     <?= tab_link('formacion',   $tab, 'Formación', count($formacion)) ?>
     <?= tab_link('experiencia', $tab, 'Experiencia', count($experiencia)) ?>
     <?= tab_link('servicios',   $tab, 'Servicios ofrecidos', count($servicios)) ?>
+    <?= tab_link('intereses',   $tab, 'Mis intereses', count($intereses)) ?>
     <?= tab_link('password',    $tab, 'Contraseña') ?>
   </nav>
 
@@ -423,6 +443,43 @@ function tab_link(string $t, string $current, string $label, ?int $count = null)
     <button type="button" class="text-azul font-semibold text-sm hover:underline" onclick="addRow('servicios', ['title','description'])">+ Agregar servicio</button>
     <div><button class="bg-naranja text-white font-semibold px-6 py-2.5 rounded hover:bg-orange-600 transition" type="submit">Guardar servicios</button></div>
   </form>
+
+<?php elseif ($tab === 'intereses'): ?>
+  <?php if (!$intereses): ?>
+    <div class="bg-gris-claro border border-gray-200 rounded p-8 text-center text-gris-oscuro">
+      Aún no marcaste ninguna oferta como de tu interés.
+      <div class="mt-3"><a href="<?= e(u('/bolsa')) ?>" class="text-azul hover:underline font-semibold">Explorar la Bolsa de Trabajo →</a></div>
+    </div>
+  <?php else: ?>
+    <p class="text-sm text-gris-oscuro mb-4">Cuando marcaste interés en una oferta, la empresa que la publicó recibió tus datos de contacto. Aquí están tus marcaciones.</p>
+    <ul class="space-y-3">
+      <?php foreach ($intereses as $i): ?>
+        <li class="bg-white border border-gray-200 rounded-lg p-5 flex flex-wrap gap-4 items-start">
+          <?php if (!empty($i['flyer_image'])): ?>
+            <img src="<?= e(img_url($i['flyer_image'])) ?>" alt="" class="w-20 h-20 object-cover rounded border border-gray-200 shrink-0" />
+          <?php endif; ?>
+          <div class="flex-1 min-w-[200px]">
+            <h3 class="font-bold text-texto"><?= e($i['title']) ?></h3>
+            <p class="text-xs text-gris-oscuro mt-0.5">
+              <a href="<?= e(u('/empresa/' . $i['company_slug'])) ?>" class="text-azul hover:underline"><?= e($i['company_name']) ?></a>
+              · <?= e($i['modality'] ?? '') ?>
+              <?= !empty($i['category']) ? ' · ' . e($i['category']) : '' ?>
+              · marcado <?= e(format_date($i['created_at'])) ?>
+            </p>
+            <?php if ($i['offer_status'] !== 'published'): ?>
+              <p class="text-xs text-coral mt-1">⚠ Esta oferta ya no está activa.</p>
+            <?php endif; ?>
+          </div>
+          <form method="post" class="shrink-0">
+            <input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>" />
+            <input type="hidden" name="action" value="remove_interest" />
+            <input type="hidden" name="offer_id" value="<?= (int)$i['offer_id'] ?>" />
+            <button class="text-xs border border-coral text-coral px-3 py-1 rounded hover:bg-red-50" type="submit" onclick="return confirm('¿Quitar de tus intereses?')">Quitar</button>
+          </form>
+        </li>
+      <?php endforeach; ?>
+    </ul>
+  <?php endif; ?>
 
 <?php elseif ($tab === 'password'): ?>
   <form method="post" class="bg-white border border-gray-200 rounded-lg p-6 space-y-4 max-w-lg">
