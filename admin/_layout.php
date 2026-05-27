@@ -27,6 +27,8 @@ $page_title = $page_title ?? 'Admin — Vértice Pro';
       <a href="<?= e(u('/admin/')) ?>aportes/">Aportes</a>
       <a href="<?= e(u('/admin/')) ?>taxonomias/">Taxonomías</a>
       <a href="<?= e(u('/admin/')) ?>usuarios/">Usuarios</a>
+      <a href="<?= e(u('/admin/')) ?>publicidad/">Publicidad</a>
+      <a href="<?= e(u('/admin/')) ?>configuracion/">Configuración</a>
     </nav>
     <div class="user-box">
       <div><strong><?= e($admin_user['name']) ?></strong></div>

@@ -47,10 +47,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     'type_id'  => !empty($_POST['type_id']) ? (int)$_POST['type_id'] : null,
                     'linkedin' => trim($_POST['linkedin'] ?? '') ?: null,
                     'website'  => trim($_POST['website'] ?? '') ?: null,
+                    'phone'    => trim($_POST['phone'] ?? '') ?: null,
+                    'company_id' => !empty($_POST['company_id']) ? (int)$_POST['company_id'] : null,
                     'available'           => !empty($_POST['available']) ? 1 : 0,
                     'visibility_email'    => !empty($_POST['visibility_email'])    ? 1 : 0,
                     'visibility_linkedin' => !empty($_POST['visibility_linkedin']) ? 1 : 0,
                     'visibility_website'  => !empty($_POST['visibility_website'])  ? 1 : 0,
+                    'visibility_phone'    => !empty($_POST['visibility_phone'])    ? 1 : 0,
                     'notifications_opt_in'=> !empty($_POST['notifications_opt_in']) ? 1 : 0,
                 ];
                 if ($data['name'] === '')  throw new RuntimeException('El nombre es obligatorio.');
@@ -272,7 +275,7 @@ function tab_link(string $t, string $current, string $label, ?int $count = null)
       <textarea name="bio" rows="5" maxlength="2000" class="w-full border border-gray-300 rounded px-3 py-2"><?= e($p['bio'] ?? '') ?></textarea>
     </div>
 
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
       <div>
         <label class="block text-sm font-semibold mb-1">LinkedIn</label>
         <input name="linkedin" value="<?= e($p['linkedin'] ?? '') ?>" placeholder="https://linkedin.com/in/…" class="w-full border border-gray-300 rounded px-3 py-2" />
@@ -281,6 +284,22 @@ function tab_link(string $t, string $current, string $label, ?int $count = null)
         <label class="block text-sm font-semibold mb-1">Sitio web</label>
         <input name="website" value="<?= e($p['website'] ?? '') ?>" placeholder="https://…" class="w-full border border-gray-300 rounded px-3 py-2" />
       </div>
+      <div>
+        <label class="block text-sm font-semibold mb-1">Teléfono / WhatsApp</label>
+        <input name="phone" value="<?= e($p['phone'] ?? '') ?>" placeholder="+595 9XX XXX XXX" class="w-full border border-gray-300 rounded px-3 py-2" />
+      </div>
+    </div>
+
+    <div>
+      <label class="block text-sm font-semibold mb-1">Empresa donde trabajo (opcional)</label>
+      <?php $allCompanies = DB::all('SELECT id, name FROM companies WHERE status = "active" ORDER BY name'); ?>
+      <select name="company_id" class="w-full border border-gray-300 rounded px-3 py-2 bg-white">
+        <option value="">— Ninguna —</option>
+        <?php foreach ($allCompanies as $ac): ?>
+          <option value="<?= (int)$ac['id'] ?>" <?= (int)($p['company_id'] ?? 0) === (int)$ac['id'] ? 'selected' : '' ?>><?= e($ac['name']) ?></option>
+        <?php endforeach; ?>
+      </select>
+      <p class="text-xs text-gris-oscuro mt-1">Si trabajas en una empresa registrada en Vértice Pro, aparecerás en su equipo público.</p>
     </div>
 
     <div>
@@ -295,6 +314,7 @@ function tab_link(string $t, string $current, string $label, ?int $count = null)
       <label class="flex items-center gap-2 text-sm text-gris-oscuro"><input type="checkbox" name="visibility_email" value="1" <?= !empty($p['visibility_email']) ? 'checked' : '' ?> class="accent-naranja" /> Mostrar mi email en el perfil público</label>
       <label class="flex items-center gap-2 text-sm text-gris-oscuro"><input type="checkbox" name="visibility_linkedin" value="1" <?= !empty($p['visibility_linkedin']) ? 'checked' : '' ?> class="accent-naranja" /> Mostrar mi LinkedIn</label>
       <label class="flex items-center gap-2 text-sm text-gris-oscuro"><input type="checkbox" name="visibility_website" value="1" <?= !empty($p['visibility_website']) ? 'checked' : '' ?> class="accent-naranja" /> Mostrar mi sitio web</label>
+      <label class="flex items-center gap-2 text-sm text-gris-oscuro"><input type="checkbox" name="visibility_phone" value="1" <?= !empty($p['visibility_phone']) ? 'checked' : '' ?> class="accent-naranja" /> Mostrar mi teléfono / WhatsApp</label>
       <label class="flex items-center gap-2 text-sm text-gris-oscuro"><input type="checkbox" name="notifications_opt_in" value="1" <?= !empty($p['notifications_opt_in']) ? 'checked' : '' ?> class="accent-naranja" /> Recibir notificaciones por email</label>
     </div>
 

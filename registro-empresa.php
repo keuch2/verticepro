@@ -7,9 +7,9 @@ $errors = [];
 $old = [
     'name' => '', 'email' => '', 'description' => '',
     'sector_id' => '', 'country_id' => '', 'department_id' => '', 'city_id' => '',
-    'size' => '', 'founded_year' => '', 'website' => '',
+    'size' => '', 'founded_year' => '', 'website' => '', 'phone' => '',
     'password' => '', 'password_confirm' => '',
-    'visibility_email' => 1, 'visibility_website' => 1,
+    'visibility_email' => 1, 'visibility_website' => 1, 'visibility_phone' => 0,
     'notifications_opt_in' => 1, 'accept_terms' => 0,
 ];
 $submitted_ok = false;
@@ -27,10 +27,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $old['size']         = $_POST['size'] ?? '';
     $old['founded_year'] = trim($_POST['founded_year'] ?? '');
     $old['website']      = trim($_POST['website'] ?? '');
+    $old['phone']        = trim($_POST['phone'] ?? '');
     $old['password']         = (string)($_POST['password'] ?? '');
     $old['password_confirm'] = (string)($_POST['password_confirm'] ?? '');
     $old['visibility_email']    = !empty($_POST['visibility_email']) ? 1 : 0;
     $old['visibility_website']  = !empty($_POST['visibility_website']) ? 1 : 0;
+    $old['visibility_phone']    = !empty($_POST['visibility_phone']) ? 1 : 0;
     $old['notifications_opt_in']= !empty($_POST['notifications_opt_in']) ? 1 : 0;
     $old['accept_terms']        = !empty($_POST['accept_terms']) ? 1 : 0;
 
@@ -87,10 +89,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'size'         => $old['size'] ?: null,
             'founded_year' => $old['founded_year'] !== '' ? (int)$old['founded_year'] : null,
             'website'      => $old['website'] ?: null,
+            'phone'        => $old['phone'] ?: null,
             'email'        => $old['email'],
             'verified'     => 0,
             'visibility_email'    => $old['visibility_email'],
             'visibility_website'  => $old['visibility_website'],
+            'visibility_phone'    => $old['visibility_phone'],
             'notifications_opt_in'=> $old['notifications_opt_in'],
             'status'       => 'pending',
         ]);
@@ -98,9 +102,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $submitted_ok = true;
         $old = [
             'name'=>'','email'=>'','description'=>'','sector_id'=>'','country_id'=>'',
-            'department_id'=>'','city_id'=>'','size'=>'','founded_year'=>'','website'=>'',
+            'department_id'=>'','city_id'=>'','size'=>'','founded_year'=>'','website'=>'','phone'=>'',
             'password'=>'','password_confirm'=>'',
-            'visibility_email'=>1,'visibility_website'=>1,
+            'visibility_email'=>1,'visibility_website'=>1,'visibility_phone'=>0,
             'notifications_opt_in'=>1,'accept_terms'=>0,
         ];
     }
@@ -239,7 +243,7 @@ include __DIR__ . '/includes/header.php';
           <textarea name="description" rows="5" maxlength="2000" placeholder="Cuéntanos sobre la empresa, servicios, sectores de cliente…" class="w-full border <?= isset($errors['description'])?'border-coral':'border-gray-300' ?> rounded px-3 py-2 focus:border-naranja focus:ring-1 focus:ring-naranja outline-none"><?= e($old['description']) ?></textarea>
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
           <div>
             <label class="block text-sm font-semibold mb-1">Año de fundación</label>
             <input name="founded_year" value="<?= e($old['founded_year']) ?>" placeholder="2010" class="w-full border <?= isset($errors['founded_year'])?'border-coral':'border-gray-300' ?> rounded px-3 py-2 focus:border-naranja focus:ring-1 focus:ring-naranja outline-none" />
@@ -248,12 +252,17 @@ include __DIR__ . '/includes/header.php';
             <label class="block text-sm font-semibold mb-1">Sitio web</label>
             <input name="website" value="<?= e($old['website']) ?>" placeholder="https://…" class="w-full border <?= isset($errors['website'])?'border-coral':'border-gray-300' ?> rounded px-3 py-2 focus:border-naranja focus:ring-1 focus:ring-naranja outline-none" />
           </div>
+          <div>
+            <label class="block text-sm font-semibold mb-1">Teléfono / WhatsApp</label>
+            <input name="phone" value="<?= e($old['phone']) ?>" placeholder="+595 9XX XXX XXX" class="w-full border border-gray-300 rounded px-3 py-2 focus:border-naranja focus:ring-1 focus:ring-naranja outline-none" />
+          </div>
         </div>
 
         <div class="border border-gray-200 rounded p-4 space-y-2">
           <p class="font-semibold text-sm">¿Qué datos quieres mostrar públicamente?</p>
           <label class="flex items-center gap-2 text-sm text-gris-oscuro"><input type="checkbox" name="visibility_email" value="1" <?= $old['visibility_email'] ? 'checked' : '' ?> class="accent-naranja" /> Mostrar email de contacto</label>
           <label class="flex items-center gap-2 text-sm text-gris-oscuro"><input type="checkbox" name="visibility_website" value="1" <?= $old['visibility_website'] ? 'checked' : '' ?> class="accent-naranja" /> Mostrar sitio web</label>
+          <label class="flex items-center gap-2 text-sm text-gris-oscuro"><input type="checkbox" name="visibility_phone" value="1" <?= $old['visibility_phone'] ? 'checked' : '' ?> class="accent-naranja" /> Mostrar teléfono / WhatsApp</label>
         </div>
 
         <div class="border border-gray-200 rounded p-4">

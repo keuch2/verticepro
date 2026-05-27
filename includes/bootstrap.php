@@ -11,6 +11,8 @@ require_once __DIR__ . '/repositories/Section.php';
 require_once __DIR__ . '/repositories/Event.php';
 require_once __DIR__ . '/repositories/NewsClipping.php';
 require_once __DIR__ . '/notifications.php';
+require_once __DIR__ . '/settings.php';
+require_once __DIR__ . '/ads.php';
 
 // A minimal helper for section pills color mapping (used across pages).
 function section_color(string $slug): string {

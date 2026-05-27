@@ -21,28 +21,39 @@ include __DIR__ . '/includes/header.php';
   </section>
 
   <section class="max-w-7xl mx-auto px-6 py-12">
-    <h2 class="text-xl font-bold mb-6">Artículos recientes</h2>
-    <?php if (!$articles): ?>
-      <p class="text-gris-oscuro">Próximamente nuevos contenidos para esta sección.</p>
-    <?php endif; ?>
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-      <?php foreach ($articles as $a): ?>
-      <article class="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden hover:shadow-md transition">
-        <?php if (!empty($a['thumb_image'])): ?>
-          <img src="<?= e(img_url($a['thumb_image'])) ?>" alt="" class="w-full h-40 object-cover" />
+    <div class="grid grid-cols-1 lg:grid-cols-4 gap-8">
+      <div class="lg:col-span-3">
+        <h2 class="text-xl font-bold mb-6">Artículos recientes</h2>
+        <?php if (!$articles): ?>
+          <p class="text-gris-oscuro">Próximamente nuevos contenidos para esta sección.</p>
         <?php endif; ?>
-        <div class="p-5">
-          <span class="text-xs font-semibold text-<?= e($color) ?>"><?= e($section['name']) ?></span>
-          <h3 class="font-bold text-texto mt-2 leading-snug"><?= e($a['title']) ?></h3>
-          <p class="text-sm text-gris-oscuro mt-2"><?= e($a['excerpt'] ?? '') ?></p>
-          <div class="flex items-center justify-between mt-4 text-xs text-gris-oscuro">
-            <span><?= e($a['author_name'] ?? 'Redacción VP') ?></span>
-            <span><?= e(format_date($a['published_at'])) ?></span>
-          </div>
-          <a href="<?= e(article_url($a)) ?>" class="text-sm text-naranja font-semibold mt-3 inline-block hover:underline">Leer más →</a>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <?php foreach ($articles as $i => $a): ?>
+          <article class="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden hover:shadow-md transition">
+            <?php if (!empty($a['thumb_image'])): ?>
+              <img src="<?= e(img_url($a['thumb_image'])) ?>" alt="" class="w-full h-40 object-cover" />
+            <?php endif; ?>
+            <div class="p-5">
+              <span class="text-xs font-semibold text-<?= e($color) ?>"><?= e($section['name']) ?></span>
+              <h3 class="font-bold text-texto mt-2 leading-snug"><?= e($a['title']) ?></h3>
+              <p class="text-sm text-gris-oscuro mt-2"><?= e($a['excerpt'] ?? '') ?></p>
+              <div class="flex items-center justify-between mt-4 text-xs text-gris-oscuro">
+                <span><?= e($a['author_name'] ?? 'Redacción VP') ?></span>
+                <span><?= e(format_date($a['published_at'])) ?></span>
+              </div>
+              <a href="<?= e(article_url($a)) ?>" class="text-sm text-naranja font-semibold mt-3 inline-block hover:underline">Leer más →</a>
+            </div>
+          </article>
+          <?php // Insertar slot publicitario tras la 4ª card
+                if ($i === 3): ?>
+            <div class="md:col-span-2"><?= ad_slot('between_articles', ['wrap_class' => 'text-center']) ?></div>
+          <?php endif; ?>
+          <?php endforeach; ?>
         </div>
-      </article>
-      <?php endforeach; ?>
+      </div>
+      <aside class="lg:col-span-1 space-y-6">
+        <?= ad_slot('sidebar', ['wrap_class' => 'text-center']) ?>
+      </aside>
     </div>
   </section>
 

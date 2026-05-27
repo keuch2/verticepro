@@ -73,10 +73,13 @@ include __DIR__ . '/includes/header.php';
               <p class="text-xs text-gris-oscuro"><?= e($loc ?: ($c['country_name'] ?? '')) ?> · <?= e($c['sector_name']) ?></p>
             </div>
           </div>
-          <p class="text-sm text-gris-oscuro leading-relaxed"><?= e($c['description']) ?></p>
+          <p class="text-sm text-gris-oscuro leading-relaxed"><?= e(mb_strimwidth($c['description'] ?? '', 0, 180, '…')) ?></p>
           <div class="flex items-center justify-between mt-4 text-xs text-gris-oscuro">
-            <span>Fundada <?= (int)$c['founded_year'] ?></span>
+            <span><?= !empty($c['founded_year']) ? 'Fundada ' . (int)$c['founded_year'] : '&nbsp;' ?></span>
             <span><?= $offers ?> oferta<?= $offers === 1 ? '' : 's' ?></span>
+          </div>
+          <div class="mt-3 pt-3 border-t border-gray-100">
+            <a href="<?= e(u('/empresa/' . $c['slug'])) ?>" class="text-sm text-naranja font-semibold hover:underline">Ver perfil →</a>
           </div>
         </article>
       <?php endforeach; ?>

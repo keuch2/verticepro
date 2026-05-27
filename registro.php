@@ -7,9 +7,9 @@ if (session_status() !== PHP_SESSION_ACTIVE) session_start();
 $errors = [];
 $old = [
     'name' => '', 'email' => '', 'title' => '', 'city_id' => '', 'type_id' => '',
-    'disciplines' => [], 'specialties' => '', 'bio' => '', 'linkedin' => '', 'website' => '',
+    'disciplines' => [], 'specialties' => '', 'bio' => '', 'linkedin' => '', 'website' => '', 'phone' => '',
     'password' => '', 'password_confirm' => '',
-    'visibility_email' => 1, 'visibility_linkedin' => 1, 'visibility_website' => 1,
+    'visibility_email' => 1, 'visibility_linkedin' => 1, 'visibility_website' => 1, 'visibility_phone' => 0,
     'notifications_opt_in' => 1, 'accept_terms' => 0,
 ];
 $submitted_ok = false;
@@ -27,11 +27,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $old['bio']         = trim($_POST['bio'] ?? '');
     $old['linkedin']    = trim($_POST['linkedin'] ?? '');
     $old['website']     = trim($_POST['website'] ?? '');
+    $old['phone']       = trim($_POST['phone'] ?? '');
     $old['password']         = (string)($_POST['password'] ?? '');
     $old['password_confirm'] = (string)($_POST['password_confirm'] ?? '');
     $old['visibility_email']    = !empty($_POST['visibility_email'])    ? 1 : 0;
     $old['visibility_linkedin'] = !empty($_POST['visibility_linkedin']) ? 1 : 0;
     $old['visibility_website']  = !empty($_POST['visibility_website'])  ? 1 : 0;
+    $old['visibility_phone']    = !empty($_POST['visibility_phone'])    ? 1 : 0;
     $old['notifications_opt_in'] = !empty($_POST['notifications_opt_in']) ? 1 : 0;
     $old['accept_terms']        = !empty($_POST['accept_terms']) ? 1 : 0;
 
@@ -89,12 +91,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'email'    => $old['email'],
             'linkedin' => $old['linkedin'] ?: null,
             'website'  => $old['website']  ?: null,
+            'phone'    => $old['phone']    ?: null,
             'verified' => 0,
             'available'=> 1,
             'featured' => 0,
             'visibility_email'    => $old['visibility_email'],
             'visibility_linkedin' => $old['visibility_linkedin'],
             'visibility_website'  => $old['visibility_website'],
+            'visibility_phone'    => $old['visibility_phone'],
             'notifications_opt_in'=> $old['notifications_opt_in'],
             'status'   => 'pending',
         ]);
@@ -111,9 +115,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $submitted_ok = true;
         $old = [
             'name'=>'','email'=>'','title'=>'','city_id'=>'','type_id'=>'','disciplines'=>[],
-            'specialties'=>'','bio'=>'','linkedin'=>'','website'=>'',
+            'specialties'=>'','bio'=>'','linkedin'=>'','website'=>'','phone'=>'',
             'password'=>'','password_confirm'=>'',
-            'visibility_email'=>1,'visibility_linkedin'=>1,'visibility_website'=>1,
+            'visibility_email'=>1,'visibility_linkedin'=>1,'visibility_website'=>1,'visibility_phone'=>0,
             'notifications_opt_in'=>1,'accept_terms'=>0,
         ];
     }
@@ -243,7 +247,7 @@ include __DIR__ . '/includes/header.php';
           <textarea name="bio" rows="5" maxlength="2000" placeholder="Cuéntanos sobre tu trayectoria, sectores de experiencia, certificaciones…" class="w-full border <?= isset($errors['bio'])?'border-coral':'border-gray-300' ?> rounded px-3 py-2 focus:border-naranja focus:ring-1 focus:ring-naranja outline-none"><?= e($old['bio']) ?></textarea>
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
           <div>
             <label class="block text-sm font-semibold mb-1">LinkedIn</label>
             <input name="linkedin" value="<?= e($old['linkedin']) ?>" placeholder="https://linkedin.com/in/…" class="w-full border <?= isset($errors['linkedin'])?'border-coral':'border-gray-300' ?> rounded px-3 py-2 focus:border-naranja focus:ring-1 focus:ring-naranja outline-none" />
@@ -252,6 +256,10 @@ include __DIR__ . '/includes/header.php';
             <label class="block text-sm font-semibold mb-1">Sitio web</label>
             <input name="website" value="<?= e($old['website']) ?>" placeholder="https://…" class="w-full border <?= isset($errors['website'])?'border-coral':'border-gray-300' ?> rounded px-3 py-2 focus:border-naranja focus:ring-1 focus:ring-naranja outline-none" />
           </div>
+          <div>
+            <label class="block text-sm font-semibold mb-1">Teléfono / WhatsApp</label>
+            <input name="phone" value="<?= e($old['phone']) ?>" placeholder="+595 9XX XXX XXX" class="w-full border border-gray-300 rounded px-3 py-2 focus:border-naranja focus:ring-1 focus:ring-naranja outline-none" />
+          </div>
         </div>
 
         <div class="border border-gray-200 rounded p-4 space-y-2">
@@ -259,6 +267,7 @@ include __DIR__ . '/includes/header.php';
           <label class="flex items-center gap-2 text-sm text-gris-oscuro"><input type="checkbox" name="visibility_email" value="1" <?= $old['visibility_email'] ? 'checked' : '' ?> class="accent-naranja" /> Mostrar mi email</label>
           <label class="flex items-center gap-2 text-sm text-gris-oscuro"><input type="checkbox" name="visibility_linkedin" value="1" <?= $old['visibility_linkedin'] ? 'checked' : '' ?> class="accent-naranja" /> Mostrar mi LinkedIn</label>
           <label class="flex items-center gap-2 text-sm text-gris-oscuro"><input type="checkbox" name="visibility_website" value="1" <?= $old['visibility_website'] ? 'checked' : '' ?> class="accent-naranja" /> Mostrar mi sitio web</label>
+          <label class="flex items-center gap-2 text-sm text-gris-oscuro"><input type="checkbox" name="visibility_phone" value="1" <?= $old['visibility_phone'] ? 'checked' : '' ?> class="accent-naranja" /> Mostrar mi teléfono / WhatsApp</label>
           <p class="text-xs text-gris-oscuro opacity-80">Los datos no visibles seguirán siendo usados internamente para verificación, pero no se mostrarán en tu perfil público.</p>
         </div>
 

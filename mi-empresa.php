@@ -39,8 +39,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     'size'         => $_POST['size'] ?? null,
                     'founded_year' => !empty($_POST['founded_year']) ? (int)$_POST['founded_year'] : null,
                     'website'      => trim($_POST['website'] ?? '') ?: null,
+                    'phone'        => trim($_POST['phone'] ?? '') ?: null,
                     'visibility_email'    => !empty($_POST['visibility_email'])    ? 1 : 0,
                     'visibility_website'  => !empty($_POST['visibility_website'])  ? 1 : 0,
+                    'visibility_phone'    => !empty($_POST['visibility_phone'])    ? 1 : 0,
                     'notifications_opt_in'=> !empty($_POST['notifications_opt_in']) ? 1 : 0,
                 ];
                 if ($data['name'] === '') throw new RuntimeException('El nombre es obligatorio.');
@@ -223,7 +225,7 @@ function tab_link_emp(string $t, string $current, string $label, ?int $count = n
       </div>
     </div>
 
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-5">
       <div>
         <label class="block text-sm font-semibold mb-1">Tamaño</label>
         <select name="size" class="w-full border border-gray-300 rounded px-3 py-2 bg-white">
@@ -232,12 +234,16 @@ function tab_link_emp(string $t, string $current, string $label, ?int $count = n
         </select>
       </div>
       <div>
-        <label class="block text-sm font-semibold mb-1">Año de fundación</label>
+        <label class="block text-sm font-semibold mb-1">Año fundación</label>
         <input name="founded_year" value="<?= e($c['founded_year'] ?? '') ?>" class="w-full border border-gray-300 rounded px-3 py-2" />
       </div>
       <div>
         <label class="block text-sm font-semibold mb-1">Sitio web</label>
         <input name="website" value="<?= e($c['website'] ?? '') ?>" placeholder="https://…" class="w-full border border-gray-300 rounded px-3 py-2" />
+      </div>
+      <div>
+        <label class="block text-sm font-semibold mb-1">Teléfono / WhatsApp</label>
+        <input name="phone" value="<?= e($c['phone'] ?? '') ?>" placeholder="+595 21 XXX XXX" class="w-full border border-gray-300 rounded px-3 py-2" />
       </div>
     </div>
 
@@ -251,6 +257,7 @@ function tab_link_emp(string $t, string $current, string $label, ?int $count = n
       <p class="font-semibold text-sm">Visibilidad y notificaciones</p>
       <label class="flex items-center gap-2 text-sm text-gris-oscuro"><input type="checkbox" name="visibility_email" value="1" <?= !empty($c['visibility_email']) ? 'checked' : '' ?> class="accent-naranja" /> Mostrar email de contacto</label>
       <label class="flex items-center gap-2 text-sm text-gris-oscuro"><input type="checkbox" name="visibility_website" value="1" <?= !empty($c['visibility_website']) ? 'checked' : '' ?> class="accent-naranja" /> Mostrar sitio web</label>
+      <label class="flex items-center gap-2 text-sm text-gris-oscuro"><input type="checkbox" name="visibility_phone" value="1" <?= !empty($c['visibility_phone']) ? 'checked' : '' ?> class="accent-naranja" /> Mostrar teléfono / WhatsApp</label>
       <label class="flex items-center gap-2 text-sm text-gris-oscuro"><input type="checkbox" name="notifications_opt_in" value="1" <?= !empty($c['notifications_opt_in']) ? 'checked' : '' ?> class="accent-naranja" /> Recibir notificaciones por email</label>
     </div>
 

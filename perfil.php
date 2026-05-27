@@ -108,14 +108,32 @@ include __DIR__ . '/includes/header.php';
         $show_email    = $p['email']    && (int)($p['visibility_email']    ?? 1);
         $show_linkedin = $p['linkedin'] && (int)($p['visibility_linkedin'] ?? 1);
         $show_website  = $p['website']  && (int)($p['visibility_website']  ?? 1);
+        $show_phone    = !empty($p['phone']) && (int)($p['visibility_phone'] ?? 0);
+        // Construir wa link (limpiar caracteres no numéricos del phone)
+        $wa_number = $show_phone ? preg_replace('/[^0-9]/', '', $p['phone']) : '';
       ?>
-      <?php if ($show_email || $show_linkedin || $show_website): ?>
+      <?php if ($show_email || $show_linkedin || $show_website || $show_phone): ?>
       <div class="bg-white rounded-lg border border-gray-200 p-6">
         <h3 class="font-bold mb-3">Contacto</h3>
         <?php if ($show_email): ?><p class="text-sm mb-1"><a href="mailto:<?= e($p['email']) ?>" class="text-azul"><?= e($p['email']) ?></a></p><?php endif; ?>
-        <?php if ($show_linkedin): ?><p class="text-sm mb-1"><a href="https://<?= e($p['linkedin']) ?>" class="text-azul">LinkedIn</a></p><?php endif; ?>
-        <?php if ($show_website): ?><p class="text-sm"><a href="https://<?= e($p['website']) ?>" class="text-azul"><?= e($p['website']) ?></a></p><?php endif; ?>
+        <?php if ($show_phone): ?>
+          <p class="text-sm mb-1">📞 <a href="tel:<?= e($p['phone']) ?>" class="text-azul"><?= e($p['phone']) ?></a><?php if ($wa_number): ?> · <a href="https://wa.me/<?= e($wa_number) ?>" target="_blank" rel="noopener" class="text-verde">WhatsApp</a><?php endif; ?></p>
+        <?php endif; ?>
+        <?php if ($show_linkedin): ?><p class="text-sm mb-1"><a href="<?= e($p['linkedin']) ?>" target="_blank" rel="noopener" class="text-azul">LinkedIn</a></p><?php endif; ?>
+        <?php if ($show_website): ?><p class="text-sm"><a href="<?= e($p['website']) ?>" target="_blank" rel="noopener" class="text-azul"><?= e($p['website']) ?></a></p><?php endif; ?>
       </div>
+      <?php endif; ?>
+
+      <?php if (!empty($p['company_id'])): $emp = CompanyRepo::find((int)$p['company_id']); ?>
+        <?php if ($emp && $emp['status'] === 'active'): ?>
+          <div class="bg-white rounded-lg border border-gray-200 p-6">
+            <h3 class="font-bold mb-3">Empresa</h3>
+            <a href="<?= e(u('/empresa/' . $emp['slug'])) ?>" class="block">
+              <p class="font-semibold text-texto"><?= e($emp['name']) ?></p>
+              <p class="text-sm text-azul hover:underline">Ver perfil de la empresa →</p>
+            </a>
+          </div>
+        <?php endif; ?>
       <?php endif; ?>
       <div class="bg-white rounded-lg border border-gray-200 p-6">
         <h3 class="font-bold mb-3">Actividad</h3>

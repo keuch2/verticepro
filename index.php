@@ -33,6 +33,9 @@ include __DIR__ . '/includes/header.php';
     </section>
     <?php endif; ?>
 
+    <?php $__ad_hero = ad_slot('home_hero', ['wrap_class' => 'max-w-7xl mx-auto px-6 pt-6 text-center']);
+          if ($__ad_hero !== '') echo $__ad_hero; ?>
+
     <section class="max-w-7xl mx-auto px-6 py-14">
       <div class="flex justify-between items-baseline mb-8">
         <h2 class="text-2xl font-extrabold text-texto">Artículos recientes</h2>

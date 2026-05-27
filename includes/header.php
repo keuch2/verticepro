@@ -2,9 +2,12 @@
 // Uso: antes del include, define $page_title, $page_active (filename o slug lógico), opcionalmente $page_description.
 require_once __DIR__ . '/helpers.php';
 require_once __DIR__ . '/auth_public.php';
-$page_title = $page_title ?? 'Vértice Pro';
+require_once __DIR__ . '/settings.php';
+require_once __DIR__ . '/ads.php';
+$site_name = setting('site.name', 'Vértice Pro') ?: 'Vértice Pro';
+$page_title = $page_title ?? $site_name;
 $page_active = $page_active ?? current_page_filename();
-$page_description = $page_description ?? 'Plataforma editorial y red profesional para especialistas en calidad, seguridad, salud ocupacional y medio ambiente.';
+$page_description = $page_description ?? setting('seo.meta_description', 'Plataforma editorial y red profesional para especialistas en calidad, seguridad, salud ocupacional y medio ambiente.');
 $current_user = public_logged_in();
 $unread_notifs = $current_user ? Notify::unreadCount((int)$current_user['id']) : 0;
 $my_area_url = '/login';
@@ -58,11 +61,13 @@ $c = $page_active;
 </head>
 <body class="bg-white font-sans text-texto antialiased">
 
+  <?php $__ad_top = ad_slot('header_top', ['wrap_class' => 'text-center py-2 bg-gris-claro border-b border-gray-200']);
+        if ($__ad_top !== '') echo $__ad_top; ?>
+
   <header id="main-header" class="sticky top-0 z-50 bg-white transition-shadow duration-200">
     <div class="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
       <a href="<?= e(u('/')) ?>"><img src="<?= e(u('/img/logo.png')) ?>" alt="Vértice Pro" class="h-9 w-auto" /></a>
       <nav class="hidden lg:flex items-center gap-0.5 text-sm font-medium">
-        <?= nav_link(u('/'), 'Inicio', 'index.php', $c) ?>
         <?= nav_link(u('/seccion/calidad'), 'Calidad', 'seccion.php', $c) ?>
         <?= nav_link(u('/seguridad'), 'Seguridad', 'seguridad.php', $c) ?>
         <?= nav_link(u('/medioambiente'), 'Medio Ambiente', 'medioambiente.php', $c) ?>
@@ -112,7 +117,6 @@ $c = $page_active;
       </div>
     </div>
     <div id="mobile-menu" class="hidden lg:hidden bg-white border-t border-gray-100 px-6 py-4 space-y-2 text-sm font-medium">
-      <?= m_nav_link(u('/'), 'Inicio', 'index.php', $c) ?>
       <?= m_nav_link(u('/seccion/calidad'), 'Calidad', 'seccion.php', $c) ?>
       <?= m_nav_link(u('/seguridad'), 'Seguridad', 'seguridad.php', $c) ?>
       <?= m_nav_link(u('/medioambiente'), 'Medio Ambiente', 'medioambiente.php', $c) ?>
