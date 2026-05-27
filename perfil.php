@@ -104,12 +104,19 @@ include __DIR__ . '/includes/header.php';
     </div>
 
     <aside class="space-y-6">
+      <?php
+        $show_email    = $p['email']    && (int)($p['visibility_email']    ?? 1);
+        $show_linkedin = $p['linkedin'] && (int)($p['visibility_linkedin'] ?? 1);
+        $show_website  = $p['website']  && (int)($p['visibility_website']  ?? 1);
+      ?>
+      <?php if ($show_email || $show_linkedin || $show_website): ?>
       <div class="bg-white rounded-lg border border-gray-200 p-6">
         <h3 class="font-bold mb-3">Contacto</h3>
-        <?php if ($p['email']): ?><p class="text-sm mb-1"><a href="mailto:<?= e($p['email']) ?>" class="text-azul"><?= e($p['email']) ?></a></p><?php endif; ?>
-        <?php if ($p['linkedin']): ?><p class="text-sm mb-1"><a href="https://<?= e($p['linkedin']) ?>" class="text-azul">LinkedIn</a></p><?php endif; ?>
-        <?php if ($p['website']): ?><p class="text-sm"><a href="https://<?= e($p['website']) ?>" class="text-azul"><?= e($p['website']) ?></a></p><?php endif; ?>
+        <?php if ($show_email): ?><p class="text-sm mb-1"><a href="mailto:<?= e($p['email']) ?>" class="text-azul"><?= e($p['email']) ?></a></p><?php endif; ?>
+        <?php if ($show_linkedin): ?><p class="text-sm mb-1"><a href="https://<?= e($p['linkedin']) ?>" class="text-azul">LinkedIn</a></p><?php endif; ?>
+        <?php if ($show_website): ?><p class="text-sm"><a href="https://<?= e($p['website']) ?>" class="text-azul"><?= e($p['website']) ?></a></p><?php endif; ?>
       </div>
+      <?php endif; ?>
       <div class="bg-white rounded-lg border border-gray-200 p-6">
         <h3 class="font-bold mb-3">Actividad</h3>
         <div class="grid grid-cols-2 gap-3 text-center">

@@ -3,6 +3,7 @@ require_once __DIR__ . '/includes/bootstrap.php';
 
 $pros = ProfessionalRepo::all();
 $cities = SectionRepo::cities();
+$departments = SectionRepo::departments();
 $types = SectionRepo::profTypes();
 
 $page_title = 'Directorio de Profesionales — Vértice Pro';
@@ -13,7 +14,7 @@ include __DIR__ . '/includes/header.php';
     <div class="max-w-7xl mx-auto flex flex-wrap items-end justify-between gap-4">
       <div>
         <h1 class="text-3xl font-extrabold text-texto">Directorio de Profesionales</h1>
-        <p class="text-gris-oscuro mt-2">Encuentra consultores, auditores y expertos verificados de Iberoamérica.</p>
+        <p class="text-gris-oscuro mt-2">Encuentra consultores, auditores y expertos verificados en Paraguay.</p>
       </div>
       <a href="<?= e(u('/registro')) ?>" class="bg-naranja text-white font-semibold px-5 py-2.5 rounded hover:bg-orange-600 transition">Únete a la red</a>
     </div>
@@ -28,9 +29,16 @@ include __DIR__ . '/includes/header.php';
       <button data-filter="salud" class="px-4 py-1.5 rounded-full border border-gray-300 text-gris-oscuro text-sm font-semibold">Salud</button>
     </div>
     <div class="flex flex-wrap gap-3 items-center">
-      <select data-filter-axis="ciudad" class="border border-gray-300 rounded px-3 py-1.5 text-sm">
+      <input type="search" data-filter-axis="search" placeholder="Buscar por nombre, especialidad…" class="border border-gray-300 rounded px-3 py-1.5 text-sm w-64" />
+      <select data-filter-axis="departamento" class="border border-gray-300 rounded px-3 py-1.5 text-sm">
+        <option value="">Todos los departamentos</option>
+        <?php foreach ($departments as $d): ?><option value="<?= e($d['slug']) ?>"><?= e($d['name']) ?></option><?php endforeach; ?>
+      </select>
+      <select data-filter-axis="ciudad" data-depends-on="departamento" class="border border-gray-300 rounded px-3 py-1.5 text-sm">
         <option value="">Todas las ciudades</option>
-        <?php foreach ($cities as $c): ?><option value="<?= e($c['slug']) ?>"><?= e($c['name']) ?></option><?php endforeach; ?>
+        <?php foreach ($cities as $c): ?>
+          <option value="<?= e($c['slug']) ?>" data-departamento="<?= e($c['department_slug'] ?? '') ?>"><?= e($c['name']) ?></option>
+        <?php endforeach; ?>
       </select>
       <select data-filter-axis="tipo" class="border border-gray-300 rounded px-3 py-1.5 text-sm">
         <option value="">Todos los tipos</option>
@@ -44,11 +52,18 @@ include __DIR__ . '/includes/header.php';
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
       <?php foreach ($pros as $p):
         $disc = ProfessionalRepo::primaryDisciplineSlug((int)$p['id']);
-        $pc = section_color($disc ?: 'seguridad'); ?>
+        $pc = section_color($disc ?: 'seguridad');
+        $specialties = implode(' ', ProfessionalRepo::specialties((int)$p['id']));
+        $search_blob = strtolower(trim(
+          ($p['name'] ?? '') . ' ' . ($p['title'] ?? '') . ' ' . ($p['bio'] ?? '') . ' ' .
+          ($p['city_name'] ?? '') . ' ' . ($p['type_name'] ?? '') . ' ' . $specialties
+        )); ?>
         <article data-card
                  data-disciplina="<?= e($disc) ?>"
+                 data-departamento="<?= e($p['department_slug'] ?? '') ?>"
                  data-ciudad="<?= e($p['city_slug'] ?? '') ?>"
                  data-tipo="<?= e($p['type_slug'] ?? '') ?>"
+                 data-search="<?= e($search_blob) ?>"
                  class="bg-white rounded-lg border border-gray-200 p-5 hover:shadow-md transition" style="transition:opacity .2s, transform .2s;">
           <div class="flex items-start gap-4">
             <div class="w-14 h-14 rounded-full bg-<?= e($pc) ?> flex items-center justify-center text-white font-bold">

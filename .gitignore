@@ -5,6 +5,8 @@ logs/
 .vscode/
 .idea/
 .claude/
-sql/
+sql/*
+!sql/migrations/
+!sql/migrations/*.sql
 AGENTS.md
 CLAUDE.md

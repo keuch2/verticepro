@@ -12,6 +12,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         'description' => trim(post('description','')) ?: null,
         'sector_id' => post_int('sector_id'),
         'country_id' => post_int('country_id'),
+        'city_id' => post_int('city_id') ?: null,
         'size' => post('size') ?: null,
         'founded_year' => post_int('founded_year'),
         'website' => trim(post('website','')) ?: null,
@@ -26,8 +27,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($rel) $data['logo_image'] = $rel;
     }
 
+    $prev_status = $c['status'] ?? null;
     if ($is_new) { $id = DB::insert('companies', $data); flash('ok','Empresa creada'); }
     else         { DB::update('companies', $data, ['id'=>$id]); flash('ok','Empresa actualizada'); }
+
+    // Aprobación: notificar a la empresa cuando pasa de pending → active
+    if (!$is_new && $prev_status === 'pending' && $data['status'] === 'active') {
+        $fresh = CompanyRepo::find($id);
+        if ($fresh && !empty($fresh['email'])) {
+            $link = u('/empresa/' . $fresh['slug']);
+            $title = '¡Tu empresa fue aprobada en Vértice Pro!';
+            $body  = "Buenas noticias. La empresa " . $fresh['name'] . " acaba de ser aprobada y ya es visible en el directorio de empresas.";
+            if (!empty($fresh['user_id'])) {
+                Notify::create((int)$fresh['user_id'], 'profile_approved', $title, $body, $link, $fresh['email']);
+            } else {
+                Notify::emailOnly($fresh['email'], $fresh['name'], (int)($fresh['notifications_opt_in'] ?? 1), $title, $body, $link);
+            }
+        }
+    }
     redirect('/admin/empresas/edit.php?id='.$id);
 }
 
@@ -55,6 +72,7 @@ include __DIR__ . '/../_layout.php';
       <div><label>Sector</label><select name="sector_id"><option value="">—</option><?= opts(SectionRepo::sectors(),'id','name',$c['sector_id']??null) ?></select></div>
       <div><label>País</label><select name="country_id"><option value="">—</option><?= opts(SectionRepo::countries(),'id','name',$c['country_id']??null) ?></select></div>
     </div>
+    <div><label>Ciudad</label><select name="city_id"><option value="">—</option><?= opts(SectionRepo::cities(),'id','name',$c['city_id']??null) ?></select></div>
     <div class="form-grid cols-2">
       <div>
         <label>Tamaño</label>

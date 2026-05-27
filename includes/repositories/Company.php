@@ -2,10 +2,15 @@
 require_once __DIR__ . '/../db.php';
 
 class CompanyRepo {
-    private const SQL = 'SELECT c.*, s.slug sector_slug, s.name sector_name, co.slug country_slug, co.name country_name
+    private const SQL = 'SELECT c.*, s.slug sector_slug, s.name sector_name,
+                                co.slug country_slug, co.name country_name,
+                                ci.slug city_slug, ci.name city_name,
+                                d.slug department_slug, d.name department_name
                          FROM companies c
                          LEFT JOIN sectors s ON s.id = c.sector_id
-                         LEFT JOIN countries co ON co.id = c.country_id';
+                         LEFT JOIN countries co ON co.id = c.country_id
+                         LEFT JOIN cities ci ON ci.id = c.city_id
+                         LEFT JOIN departments d ON d.id = ci.department_id';
 
     public static function find(int $id): ?array   { return DB::one(self::SQL . ' WHERE c.id = ?', [$id]); }
     public static function bySlug(string $s): ?array { return DB::one(self::SQL . ' WHERE c.slug = ? AND c.status = "active"', [$s]); }

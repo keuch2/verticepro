@@ -1,18 +1,32 @@
 <?php
 require_once __DIR__ . '/includes/bootstrap.php';
+if (session_status() !== PHP_SESSION_ACTIVE) session_start();
 $offers = JobOfferRepo::all();
 $services = ServiceRepo::all();
+$flash_ok  = flash('bolsa_ok');
+$flash_err = flash('bolsa_err');
 $page_title = 'Bolsa de Trabajo — Vértice Pro'; $page_active = 'bolsa.php';
 include __DIR__ . '/includes/header.php';
 ?>
   <section class="bg-gris-claro py-12 px-6">
     <div class="max-w-7xl mx-auto">
-      <h1 class="text-3xl font-extrabold">Bolsa de Trabajo</h1>
-      <p class="text-gris-oscuro mt-2">Ofertas de empleo y servicios profesionales del sector.</p>
+      <div class="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <h1 class="text-3xl font-extrabold">Bolsa de Trabajo</h1>
+          <p class="text-gris-oscuro mt-2">Ofertas de empleo y servicios profesionales del sector en Paraguay.</p>
+        </div>
+        <div class="flex flex-wrap gap-2">
+          <a href="<?= e(u('/bolsa-publicar-oferta')) ?>" class="bg-naranja text-white font-semibold px-4 py-2 rounded hover:bg-orange-600 transition text-sm">Publicar oferta</a>
+          <a href="<?= e(u('/bolsa-publicar-servicio')) ?>" class="border border-naranja text-naranja font-semibold px-4 py-2 rounded hover:bg-orange-50 transition text-sm">Publicar servicio</a>
+        </div>
+      </div>
     </div>
   </section>
 
   <section class="max-w-7xl mx-auto px-6 py-8">
+    <?php if ($flash_ok): ?><div class="bg-verde/10 border border-verde rounded p-4 mb-6 text-texto"><?= e($flash_ok) ?></div><?php endif; ?>
+    <?php if ($flash_err): ?><div class="bg-red-50 border border-coral rounded p-4 mb-6 text-coral"><?= e($flash_err) ?></div><?php endif; ?>
+
     <div class="flex gap-2 mb-8">
       <button id="btn-ofertas" class="bg-azul text-white px-5 py-2 rounded text-sm font-semibold">Ofertas de empleo</button>
       <button id="btn-servicios" class="bg-white border border-gray-300 text-gris-oscuro px-5 py-2 rounded text-sm font-semibold">Servicios profesionales</button>
@@ -20,20 +34,41 @@ include __DIR__ . '/includes/header.php';
 
     <div id="ofertas-section" class="space-y-4">
       <?php foreach ($offers as $o): ?>
-        <article class="bg-white rounded-lg border border-gray-200 p-5 flex flex-wrap gap-4 items-start hover:shadow-md transition">
-          <div class="flex-1 min-w-[250px]">
-            <h3 class="font-bold text-texto text-lg"><?= e($o['title']) ?></h3>
-            <p class="text-sm text-gris-oscuro mt-0.5"><?= e($o['company_name']) ?> · <?= e($o['country_name']) ?></p>
-            <p class="text-sm text-gris-oscuro mt-3 leading-relaxed"><?= e(mb_strimwidth($o['description'] ?? '', 0, 220, '…')) ?></p>
+        <article class="bg-white rounded-lg border border-gray-200 p-5 hover:shadow-md transition">
+          <div class="flex flex-wrap gap-4 items-start">
+            <div class="flex-1 min-w-[250px]">
+              <h3 class="font-bold text-texto text-lg"><?= e($o['title']) ?></h3>
+              <p class="text-sm text-gris-oscuro mt-0.5"><?= e($o['company_name']) ?> · <?= e($o['country_name']) ?></p>
+              <p class="text-sm text-gris-oscuro mt-3 leading-relaxed"><?= e(mb_strimwidth($o['description'] ?? '', 0, 220, '…')) ?></p>
+            </div>
+            <div class="flex flex-col items-end gap-2">
+              <span class="text-xs px-2 py-0.5 rounded-full bg-orange-100 text-naranja font-semibold uppercase"><?= e($o['modality']) ?></span>
+              <span class="text-xs text-gris-oscuro"><?= e($o['category']) ?></span>
+              <?php if ($o['salary_min']): ?>
+                <span class="text-xs text-gris-oscuro">Gs. <?= number_format($o['salary_min']) ?> – <?= number_format($o['salary_max']) ?></span>
+              <?php endif; ?>
+              <button type="button" class="text-sm text-naranja font-semibold hover:underline mt-2" data-interest-toggle="<?= (int)$o['id'] ?>">Me interesa →</button>
+            </div>
           </div>
-          <div class="flex flex-col items-end gap-2">
-            <span class="text-xs px-2 py-0.5 rounded-full bg-orange-100 text-naranja font-semibold uppercase"><?= e($o['modality']) ?></span>
-            <span class="text-xs text-gris-oscuro"><?= e($o['category']) ?></span>
-            <?php if ($o['salary_min']): ?>
-              <span class="text-xs text-gris-oscuro"><?= number_format($o['salary_min']) ?> – <?= number_format($o['salary_max']) ?> €/año</span>
-            <?php endif; ?>
-            <a href="#" class="text-sm text-naranja font-semibold hover:underline mt-2">Postular →</a>
-          </div>
+          <form method="post" action="<?= e(u('/bolsa-interes.php')) ?>" class="hidden mt-4 pt-4 border-t border-gray-200 grid grid-cols-1 md:grid-cols-3 gap-3 items-end" data-interest-form="<?= (int)$o['id'] ?>">
+            <input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>" />
+            <input type="hidden" name="offer_id" value="<?= (int)$o['id'] ?>" />
+            <div>
+              <label class="block text-xs font-semibold mb-1">Nombre completo *</label>
+              <input name="name" required class="w-full border border-gray-300 rounded px-3 py-2 text-sm" />
+            </div>
+            <div>
+              <label class="block text-xs font-semibold mb-1">Email *</label>
+              <input name="email" type="email" required class="w-full border border-gray-300 rounded px-3 py-2 text-sm" />
+            </div>
+            <div class="md:col-span-1">
+              <button class="bg-naranja text-white font-semibold px-4 py-2 rounded hover:bg-orange-600 transition text-sm w-full" type="submit">Marcar mi interés</button>
+            </div>
+            <div class="md:col-span-3">
+              <label class="block text-xs font-semibold mb-1">Mensaje (opcional)</label>
+              <textarea name="message" rows="2" class="w-full border border-gray-300 rounded px-3 py-2 text-sm" placeholder="Cuéntale al ofertante por qué te interesa esta posición."></textarea>
+            </div>
+          </form>
         </article>
       <?php endforeach; ?>
     </div>

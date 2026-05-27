@@ -8,6 +8,8 @@ $errors = [];
 $old = [
     'name' => '', 'email' => '', 'title' => '', 'city_id' => '', 'type_id' => '',
     'disciplines' => [], 'specialties' => '', 'bio' => '', 'linkedin' => '', 'website' => '',
+    'visibility_email' => 1, 'visibility_linkedin' => 1, 'visibility_website' => 1,
+    'notifications_opt_in' => 1, 'accept_terms' => 0,
 ];
 $submitted_ok = false;
 
@@ -24,7 +26,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $old['bio']         = trim($_POST['bio'] ?? '');
     $old['linkedin']    = trim($_POST['linkedin'] ?? '');
     $old['website']     = trim($_POST['website'] ?? '');
+    $old['visibility_email']    = !empty($_POST['visibility_email'])    ? 1 : 0;
+    $old['visibility_linkedin'] = !empty($_POST['visibility_linkedin']) ? 1 : 0;
+    $old['visibility_website']  = !empty($_POST['visibility_website'])  ? 1 : 0;
+    $old['notifications_opt_in'] = !empty($_POST['notifications_opt_in']) ? 1 : 0;
+    $old['accept_terms']        = !empty($_POST['accept_terms']) ? 1 : 0;
 
+    if (!$old['accept_terms'])                                $errors['accept_terms'] = 'Debes aceptar los términos y condiciones para continuar.';
     if ($old['name'] === '')                                  $errors['name']  = 'Indícanos tu nombre completo.';
     if ($old['email'] === '' || !filter_var($old['email'], FILTER_VALIDATE_EMAIL)) $errors['email'] = 'Necesitamos un email válido para contactarte.';
     if ($old['title'] === '')                                 $errors['title'] = 'Indica tu título o cargo profesional.';
@@ -66,6 +74,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'verified' => 0,
             'available'=> 1,
             'featured' => 0,
+            'visibility_email'    => $old['visibility_email'],
+            'visibility_linkedin' => $old['visibility_linkedin'],
+            'visibility_website'  => $old['visibility_website'],
+            'notifications_opt_in'=> $old['notifications_opt_in'],
             'status'   => 'pending',
         ]);
 
@@ -79,7 +91,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         $submitted_ok = true;
-        $old = ['name'=>'','email'=>'','title'=>'','city_id'=>'','type_id'=>'','disciplines'=>[],'specialties'=>'','bio'=>'','linkedin'=>'','website'=>''];
+        $old = [
+            'name'=>'','email'=>'','title'=>'','city_id'=>'','type_id'=>'','disciplines'=>[],
+            'specialties'=>'','bio'=>'','linkedin'=>'','website'=>'',
+            'visibility_email'=>1,'visibility_linkedin'=>1,'visibility_website'=>1,
+            'notifications_opt_in'=>1,'accept_terms'=>0,
+        ];
     }
 }
 
@@ -206,8 +223,28 @@ include __DIR__ . '/includes/header.php';
           </div>
         </div>
 
-        <div class="bg-gris-claro rounded p-4 text-sm text-gris-oscuro">
-          Al enviar, aceptas que revisemos tu información antes de publicarla. Consulta nuestra <a href="<?= e(u('/privacidad')) ?>" class="text-azul hover:underline">política de privacidad</a>.
+        <div class="border border-gray-200 rounded p-4 space-y-2">
+          <p class="font-semibold text-sm">¿Qué datos quieres mostrar públicamente en tu perfil?</p>
+          <label class="flex items-center gap-2 text-sm text-gris-oscuro"><input type="checkbox" name="visibility_email" value="1" <?= $old['visibility_email'] ? 'checked' : '' ?> class="accent-naranja" /> Mostrar mi email</label>
+          <label class="flex items-center gap-2 text-sm text-gris-oscuro"><input type="checkbox" name="visibility_linkedin" value="1" <?= $old['visibility_linkedin'] ? 'checked' : '' ?> class="accent-naranja" /> Mostrar mi LinkedIn</label>
+          <label class="flex items-center gap-2 text-sm text-gris-oscuro"><input type="checkbox" name="visibility_website" value="1" <?= $old['visibility_website'] ? 'checked' : '' ?> class="accent-naranja" /> Mostrar mi sitio web</label>
+          <p class="text-xs text-gris-oscuro opacity-80">Los datos no visibles seguirán siendo usados internamente para verificación, pero no se mostrarán en tu perfil público.</p>
+        </div>
+
+        <div class="border border-gray-200 rounded p-4">
+          <label class="flex items-start gap-3 text-sm text-gris-oscuro">
+            <input type="checkbox" name="notifications_opt_in" value="1" <?= $old['notifications_opt_in'] ? 'checked' : '' ?> class="accent-naranja mt-0.5" />
+            <span>Quiero recibir notificaciones por email sobre actividad relevante de mi perfil (aprobación, interesados en mis servicios, mensajes, eventos).</span>
+          </label>
+        </div>
+
+        <div class="bg-gris-claro rounded p-4 text-sm text-gris-oscuro space-y-3">
+          <p>Vértice Pro se reserva el derecho de modificar los <a href="<?= e(u('/terminos')) ?>" class="text-azul hover:underline">términos y condiciones</a> del servicio en cualquier momento. Los cambios serán notificados a los usuarios registrados con razonable antelación.</p>
+          <p>Al enviar, aceptas que revisemos tu información antes de publicarla. Consulta nuestra <a href="<?= e(u('/privacidad')) ?>" class="text-azul hover:underline">política de privacidad</a>.</p>
+          <label class="flex items-start gap-3 mt-2">
+            <input type="checkbox" name="accept_terms" value="1" <?= $old['accept_terms'] ? 'checked' : '' ?> class="accent-naranja mt-0.5" required />
+            <span>He leído y acepto los <a href="<?= e(u('/terminos')) ?>" class="text-azul hover:underline">términos y condiciones</a> y la <a href="<?= e(u('/privacidad')) ?>" class="text-azul hover:underline">política de privacidad</a>. <span class="text-coral">*</span></span>
+          </label>
         </div>
 
         <div class="flex flex-wrap items-center gap-3 pt-2">

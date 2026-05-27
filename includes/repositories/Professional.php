@@ -2,9 +2,13 @@
 require_once __DIR__ . '/../db.php';
 
 class ProfessionalRepo {
-    private const BASE_SELECT = 'SELECT p.*, c.name city_name, c.slug city_slug, co.name country_name, co.slug country_slug, t.slug type_slug, t.name type_name
+    private const BASE_SELECT = 'SELECT p.*, c.name city_name, c.slug city_slug,
+                                        d.slug department_slug, d.name department_name,
+                                        co.name country_name, co.slug country_slug,
+                                        t.slug type_slug, t.name type_name
                                  FROM professionals p
                                  LEFT JOIN cities c ON c.id = p.city_id
+                                 LEFT JOIN departments d ON d.id = c.department_id
                                  LEFT JOIN countries co ON co.id = c.country_id
                                  LEFT JOIN professional_types t ON t.id = p.type_id';
 

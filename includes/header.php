@@ -63,14 +63,18 @@ $c = $page_active;
             Biblioteca
             <svg class="w-3.5 h-3.5 opacity-60" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
           </button>
-          <div class="absolute top-full left-0 mt-1 w-52 bg-white border border-gray-200 rounded-lg shadow-lg py-1 hidden group-hover:block z-50">
+          <div class="absolute top-full left-0 mt-1 w-56 bg-white border border-gray-200 rounded-lg shadow-lg py-1 hidden group-hover:block z-50">
             <a href="<?= e(u('/publicaciones')) ?>" class="block px-4 py-2.5 text-sm text-gris-oscuro hover:bg-gris-claro hover:text-naranja transition">Publicaciones Técnicas</a>
             <a href="<?= e(u('/recursos')) ?>" class="block px-4 py-2.5 text-sm text-gris-oscuro hover:bg-gris-claro hover:text-naranja transition">Recursos Descargables</a>
+            <a href="<?= e(u('/legislacion')) ?>" class="block px-4 py-2.5 text-sm text-gris-oscuro hover:bg-gris-claro hover:text-naranja transition">Legislación</a>
+            <a href="<?= e(u('/clipping')) ?>" class="block px-4 py-2.5 text-sm text-gris-oscuro hover:bg-gris-claro hover:text-naranja transition">Clipping de Noticias</a>
+            <a href="<?= e(u('/aportar')) ?>" class="block px-4 py-2.5 text-sm text-gris-oscuro hover:bg-gris-claro hover:text-naranja transition border-t border-gray-100">Aportar contenido</a>
           </div>
         </div>
         <div class="border-r border-gray-200 h-5 mx-2"></div>
         <?= nav_link(u('/red'), 'Red de Profesionales', 'red.php', $c) ?>
         <?= nav_link(u('/bolsa'), 'Bolsa de Trabajo', 'bolsa.php', $c) ?>
+        <?= nav_link(u('/eventos'), 'Eventos', 'eventos.php', $c) ?>
       </nav>
       <div class="flex items-center gap-3">
         <a href="<?= e(u('/registro')) ?>" class="hidden md:inline-flex bg-naranja text-white text-sm font-semibold px-4 py-2 rounded hover:bg-orange-600 transition duration-150">Únete a la red</a>
@@ -87,12 +91,17 @@ $c = $page_active;
       <?= m_nav_link(u('/salud'), 'Salud Ocupacional', 'salud.php', $c) ?>
       <?= m_nav_link(u('/publicaciones'), 'Publicaciones', 'publicaciones.php', $c) ?>
       <?= m_nav_link(u('/recursos'), 'Recursos', 'recursos.php', $c) ?>
+      <?= m_nav_link(u('/legislacion'), 'Legislación', 'seccion.php', $c) ?>
+      <?= m_nav_link(u('/clipping'), 'Clipping de Noticias', 'clipping.php', $c) ?>
+      <?= m_nav_link(u('/aportar'), 'Aportar contenido', 'aportar.php', $c) ?>
       <div class="border-t border-gray-100 pt-2 mt-2">
         <?= m_nav_link(u('/red'), 'Red de Profesionales', 'red.php', $c) ?>
         <?= m_nav_link(u('/bolsa'), 'Bolsa de Trabajo', 'bolsa.php', $c) ?>
+        <?= m_nav_link(u('/eventos'), 'Eventos', 'eventos.php', $c) ?>
       </div>
-      <div class="border-t border-gray-100 pt-3 mt-2">
+      <div class="border-t border-gray-100 pt-3 mt-2 space-y-2">
         <a href="<?= e(u('/registro')) ?>" class="block text-center bg-naranja text-white font-semibold px-4 py-2 rounded hover:bg-orange-600 transition">Únete a la red</a>
+        <a href="<?= e(u('/registro-empresa')) ?>" class="block text-center border border-naranja text-naranja font-semibold px-4 py-2 rounded hover:bg-orange-50 transition">Registra tu empresa</a>
       </div>
     </div>
   </header>
