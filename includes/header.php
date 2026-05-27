@@ -1,9 +1,18 @@
 <?php
 // Uso: antes del include, define $page_title, $page_active (filename o slug lógico), opcionalmente $page_description.
 require_once __DIR__ . '/helpers.php';
+require_once __DIR__ . '/auth_public.php';
 $page_title = $page_title ?? 'Vértice Pro';
 $page_active = $page_active ?? current_page_filename();
 $page_description = $page_description ?? 'Plataforma editorial y red profesional para especialistas en calidad, seguridad, salud ocupacional y medio ambiente.';
+$current_user = public_logged_in();
+$unread_notifs = $current_user ? Notify::unreadCount((int)$current_user['id']) : 0;
+$my_area_url = '/login';
+if ($current_user) {
+    if ($current_user['role'] === 'professional')                $my_area_url = '/mi-perfil';
+    elseif ($current_user['role'] === 'company')                 $my_area_url = '/mi-empresa';
+    elseif (in_array($current_user['role'], ['admin','author'], true)) $my_area_url = '/admin/';
+}
 
 // Helper for nav link active state (desktop)
 function nav_link(string $href, string $label, string $active_key, string $current): string {
@@ -77,7 +86,26 @@ $c = $page_active;
         <?= nav_link(u('/eventos'), 'Eventos', 'eventos.php', $c) ?>
       </nav>
       <div class="flex items-center gap-3">
-        <a href="<?= e(u('/registro')) ?>" class="hidden md:inline-flex bg-naranja text-white text-sm font-semibold px-4 py-2 rounded hover:bg-orange-600 transition duration-150">Únete a la red</a>
+        <?php if ($current_user): ?>
+          <a href="<?= e(u('/notificaciones')) ?>" class="hidden md:inline-flex relative text-gris-oscuro hover:text-naranja transition p-2" title="Notificaciones">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.4-1.4A2 2 0 0118 14V11a6 6 0 00-4-5.7V5a2 2 0 10-4 0v.3A6 6 0 006 11v3a2 2 0 01-.6 1.4L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
+            <?php if ($unread_notifs > 0): ?><span class="absolute top-1 right-1 bg-coral text-white text-[10px] font-bold rounded-full px-1.5"><?= (int)$unread_notifs ?></span><?php endif; ?>
+          </a>
+          <div class="hidden md:block relative group">
+            <button class="bg-azul text-white text-sm font-semibold px-4 py-2 rounded hover:bg-blue-700 transition duration-150 flex items-center gap-1">
+              <?= e(mb_strimwidth($current_user['name'], 0, 18, '…')) ?>
+              <svg class="w-3.5 h-3.5 opacity-80" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+            </button>
+            <div class="absolute right-0 top-full mt-1 w-52 bg-white border border-gray-200 rounded-lg shadow-lg py-1 hidden group-hover:block z-50">
+              <a href="<?= e(u($my_area_url)) ?>" class="block px-4 py-2.5 text-sm text-gris-oscuro hover:bg-gris-claro hover:text-naranja transition">Mi cuenta</a>
+              <a href="<?= e(u('/notificaciones')) ?>" class="block px-4 py-2.5 text-sm text-gris-oscuro hover:bg-gris-claro hover:text-naranja transition">Notificaciones<?php if ($unread_notifs > 0): ?> <span class="text-coral font-bold">(<?= (int)$unread_notifs ?>)</span><?php endif; ?></a>
+              <a href="<?= e(u('/logout')) ?>" class="block px-4 py-2.5 text-sm text-coral hover:bg-red-50 transition border-t border-gray-100">Cerrar sesión</a>
+            </div>
+          </div>
+        <?php else: ?>
+          <a href="<?= e(u('/login')) ?>" class="hidden md:inline-flex text-gris-oscuro hover:text-naranja text-sm font-semibold px-3 py-2 transition duration-150">Iniciar sesión</a>
+          <a href="<?= e(u('/registro')) ?>" class="hidden md:inline-flex bg-naranja text-white text-sm font-semibold px-4 py-2 rounded hover:bg-orange-600 transition duration-150">Únete a la red</a>
+        <?php endif; ?>
         <button id="mobile-menu-btn" aria-expanded="false" class="lg:hidden p-2 text-gris-oscuro hover:text-naranja transition">
           <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
         </button>
@@ -100,8 +128,15 @@ $c = $page_active;
         <?= m_nav_link(u('/eventos'), 'Eventos', 'eventos.php', $c) ?>
       </div>
       <div class="border-t border-gray-100 pt-3 mt-2 space-y-2">
-        <a href="<?= e(u('/registro')) ?>" class="block text-center bg-naranja text-white font-semibold px-4 py-2 rounded hover:bg-orange-600 transition">Únete a la red</a>
-        <a href="<?= e(u('/registro-empresa')) ?>" class="block text-center border border-naranja text-naranja font-semibold px-4 py-2 rounded hover:bg-orange-50 transition">Registra tu empresa</a>
+        <?php if ($current_user): ?>
+          <a href="<?= e(u($my_area_url)) ?>" class="block text-center bg-azul text-white font-semibold px-4 py-2 rounded hover:bg-blue-700 transition">Mi cuenta</a>
+          <a href="<?= e(u('/notificaciones')) ?>" class="block text-center border border-azul text-azul font-semibold px-4 py-2 rounded hover:bg-blue-50 transition">Notificaciones<?php if ($unread_notifs > 0): ?> (<?= (int)$unread_notifs ?>)<?php endif; ?></a>
+          <a href="<?= e(u('/logout')) ?>" class="block text-center text-coral font-semibold px-4 py-2">Cerrar sesión</a>
+        <?php else: ?>
+          <a href="<?= e(u('/login')) ?>" class="block text-center border border-gray-300 text-gris-oscuro font-semibold px-4 py-2 rounded hover:bg-gris-claro transition">Iniciar sesión</a>
+          <a href="<?= e(u('/registro')) ?>" class="block text-center bg-naranja text-white font-semibold px-4 py-2 rounded hover:bg-orange-600 transition">Únete a la red</a>
+          <a href="<?= e(u('/registro-empresa')) ?>" class="block text-center border border-naranja text-naranja font-semibold px-4 py-2 rounded hover:bg-orange-50 transition">Registra tu empresa</a>
+        <?php endif; ?>
       </div>
     </div>
   </header>

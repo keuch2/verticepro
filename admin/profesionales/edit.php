@@ -36,13 +36,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($is_new) { $id = DB::insert('professionals', $data); flash('ok','Profesional creado'); }
     else         { DB::update('professionals', $data, ['id'=>$id]); flash('ok','Profesional actualizado'); }
 
-    // Aprobación: notificar al profesional cuando pasa de pending → active
+    // Aprobación: activar también el users vinculado + notificar al profesional
     if (!$is_new && $prev_status === 'pending' && $data['status'] === 'active') {
         $fresh = ProfessionalRepo::find($id);
         if ($fresh) {
-            $link = u('/perfil/' . $fresh['slug']);
+            if (!empty($fresh['user_id'])) {
+                DB::update('users', ['status' => 'active'], ['id' => (int)$fresh['user_id']]);
+            }
+            $link = u('/mi-perfil');
             $title = '¡Tu perfil profesional fue aprobado!';
-            $body  = "Buenas noticias, " . $fresh['name'] . ". Tu perfil en la Red Vértice Pro acaba de ser aprobado y ya es visible en el directorio.";
+            $body  = "Buenas noticias, " . $fresh['name'] . ". Tu perfil en la Red Vértice Pro acaba de ser aprobado y ya es visible en el directorio. Ya puedes iniciar sesión con tu email y la contraseña que elegiste al registrarte para editar tu perfil.";
             if (!empty($fresh['user_id'])) {
                 Notify::create((int)$fresh['user_id'], 'profile_approved', $title, $body, $link, $fresh['email']);
             } elseif (!empty($fresh['email'])) {

@@ -31,13 +31,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($is_new) { $id = DB::insert('companies', $data); flash('ok','Empresa creada'); }
     else         { DB::update('companies', $data, ['id'=>$id]); flash('ok','Empresa actualizada'); }
 
-    // Aprobación: notificar a la empresa cuando pasa de pending → active
+    // Aprobación: activar también el users vinculado + notificar a la empresa
     if (!$is_new && $prev_status === 'pending' && $data['status'] === 'active') {
         $fresh = CompanyRepo::find($id);
         if ($fresh && !empty($fresh['email'])) {
-            $link = u('/empresa/' . $fresh['slug']);
+            if (!empty($fresh['user_id'])) {
+                DB::update('users', ['status' => 'active'], ['id' => (int)$fresh['user_id']]);
+            }
+            $link = u('/mi-empresa');
             $title = '¡Tu empresa fue aprobada en Vértice Pro!';
-            $body  = "Buenas noticias. La empresa " . $fresh['name'] . " acaba de ser aprobada y ya es visible en el directorio de empresas.";
+            $body  = "Buenas noticias. La empresa " . $fresh['name'] . " acaba de ser aprobada y ya es visible en el directorio de empresas. Ya puedes iniciar sesión con tu email y contraseña para editar el perfil de la empresa y publicar ofertas.";
             if (!empty($fresh['user_id'])) {
                 Notify::create((int)$fresh['user_id'], 'profile_approved', $title, $body, $link, $fresh['email']);
             } else {

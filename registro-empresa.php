@@ -8,6 +8,7 @@ $old = [
     'name' => '', 'email' => '', 'description' => '',
     'sector_id' => '', 'country_id' => '', 'department_id' => '', 'city_id' => '',
     'size' => '', 'founded_year' => '', 'website' => '',
+    'password' => '', 'password_confirm' => '',
     'visibility_email' => 1, 'visibility_website' => 1,
     'notifications_opt_in' => 1, 'accept_terms' => 0,
 ];
@@ -26,12 +27,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $old['size']         = $_POST['size'] ?? '';
     $old['founded_year'] = trim($_POST['founded_year'] ?? '');
     $old['website']      = trim($_POST['website'] ?? '');
+    $old['password']         = (string)($_POST['password'] ?? '');
+    $old['password_confirm'] = (string)($_POST['password_confirm'] ?? '');
     $old['visibility_email']    = !empty($_POST['visibility_email']) ? 1 : 0;
     $old['visibility_website']  = !empty($_POST['visibility_website']) ? 1 : 0;
     $old['notifications_opt_in']= !empty($_POST['notifications_opt_in']) ? 1 : 0;
     $old['accept_terms']        = !empty($_POST['accept_terms']) ? 1 : 0;
 
     if (!$old['accept_terms'])                                $errors['accept_terms'] = 'Debes aceptar los términos y condiciones para continuar.';
+    if (strlen($old['password']) < 8)                         $errors['password'] = 'La contraseña debe tener al menos 8 caracteres.';
+    elseif ($old['password'] !== $old['password_confirm'])    $errors['password'] = 'Las contraseñas no coinciden.';
     if ($old['name'] === '')                                  $errors['name'] = 'Indícanos el nombre de la empresa.';
     if ($old['email'] === '' || !filter_var($old['email'], FILTER_VALIDATE_EMAIL)) $errors['email'] = 'Necesitamos un email válido para contactarte.';
     if ($old['sector_id'] === '')                             $errors['sector_id'] = 'Selecciona un sector.';
@@ -48,7 +53,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($exists) {
             $errors['email'] = $exists['status'] === 'pending'
                 ? 'Ya tenemos una solicitud pendiente con este email. La estamos revisando.'
-                : 'Este email ya está registrado para otra empresa.';
+                : 'Este email ya está registrado para otra empresa. Si es tu cuenta, inicia sesión o recupera tu contraseña.';
+        } elseif (DB::one('SELECT id FROM users WHERE email = ? LIMIT 1', [$old['email']])) {
+            $errors['email'] = 'Este email ya tiene una cuenta. Inicia sesión o recupera tu contraseña.';
         }
     }
 
@@ -60,7 +67,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($i > 999) { $slug = $base . '-' . bin2hex(random_bytes(3)); break; }
         }
 
+        $user_id = DB::insert('users', [
+            'email' => $old['email'],
+            'password_hash' => password_hash($old['password'], PASSWORD_DEFAULT),
+            'role' => 'company',
+            'name' => $old['name'],
+            'status' => 'pending',
+            'notifications_opt_in' => $old['notifications_opt_in'],
+        ]);
+
         DB::insert('companies', [
+            'user_id'      => $user_id,
             'slug'         => $slug,
             'name'         => $old['name'],
             'description'  => $old['description'] ?: null,
@@ -82,6 +99,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $old = [
             'name'=>'','email'=>'','description'=>'','sector_id'=>'','country_id'=>'',
             'department_id'=>'','city_id'=>'','size'=>'','founded_year'=>'','website'=>'',
+            'password'=>'','password_confirm'=>'',
             'visibility_email'=>1,'visibility_website'=>1,
             'notifications_opt_in'=>1,'accept_terms'=>0,
         ];
@@ -151,6 +169,18 @@ include __DIR__ . '/includes/header.php';
           <div>
             <label class="block text-sm font-semibold mb-1">Email de contacto <span class="text-coral">*</span></label>
             <input name="email" type="email" required value="<?= e($old['email']) ?>" class="w-full border <?= isset($errors['email'])?'border-coral':'border-gray-300' ?> rounded px-3 py-2 focus:border-naranja focus:ring-1 focus:ring-naranja outline-none" />
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+          <div>
+            <label class="block text-sm font-semibold mb-1">Contraseña <span class="text-coral">*</span></label>
+            <input name="password" type="password" required minlength="8" class="w-full border <?= isset($errors['password'])?'border-coral':'border-gray-300' ?> rounded px-3 py-2 focus:border-naranja focus:ring-1 focus:ring-naranja outline-none" />
+            <p class="text-xs text-gris-oscuro mt-1">Mínimo 8 caracteres. La usarás para editar el perfil de tu empresa.</p>
+          </div>
+          <div>
+            <label class="block text-sm font-semibold mb-1">Confirmar contraseña <span class="text-coral">*</span></label>
+            <input name="password_confirm" type="password" required minlength="8" class="w-full border <?= isset($errors['password'])?'border-coral':'border-gray-300' ?> rounded px-3 py-2 focus:border-naranja focus:ring-1 focus:ring-naranja outline-none" />
           </div>
         </div>
 

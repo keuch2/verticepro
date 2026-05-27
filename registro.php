@@ -8,6 +8,7 @@ $errors = [];
 $old = [
     'name' => '', 'email' => '', 'title' => '', 'city_id' => '', 'type_id' => '',
     'disciplines' => [], 'specialties' => '', 'bio' => '', 'linkedin' => '', 'website' => '',
+    'password' => '', 'password_confirm' => '',
     'visibility_email' => 1, 'visibility_linkedin' => 1, 'visibility_website' => 1,
     'notifications_opt_in' => 1, 'accept_terms' => 0,
 ];
@@ -26,6 +27,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $old['bio']         = trim($_POST['bio'] ?? '');
     $old['linkedin']    = trim($_POST['linkedin'] ?? '');
     $old['website']     = trim($_POST['website'] ?? '');
+    $old['password']         = (string)($_POST['password'] ?? '');
+    $old['password_confirm'] = (string)($_POST['password_confirm'] ?? '');
     $old['visibility_email']    = !empty($_POST['visibility_email'])    ? 1 : 0;
     $old['visibility_linkedin'] = !empty($_POST['visibility_linkedin']) ? 1 : 0;
     $old['visibility_website']  = !empty($_POST['visibility_website'])  ? 1 : 0;
@@ -33,6 +36,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $old['accept_terms']        = !empty($_POST['accept_terms']) ? 1 : 0;
 
     if (!$old['accept_terms'])                                $errors['accept_terms'] = 'Debes aceptar los términos y condiciones para continuar.';
+    if (strlen($old['password']) < 8)                         $errors['password'] = 'La contraseña debe tener al menos 8 caracteres.';
+    elseif ($old['password'] !== $old['password_confirm'])    $errors['password'] = 'Las contraseñas no coinciden.';
     if ($old['name'] === '')                                  $errors['name']  = 'Indícanos tu nombre completo.';
     if ($old['email'] === '' || !filter_var($old['email'], FILTER_VALIDATE_EMAIL)) $errors['email'] = 'Necesitamos un email válido para contactarte.';
     if ($old['title'] === '')                                 $errors['title'] = 'Indica tu título o cargo profesional.';
@@ -47,7 +52,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($exists) {
             $errors['email'] = $exists['status'] === 'pending'
                 ? 'Ya tenemos una solicitud pendiente con este email. La estamos revisando.'
-                : 'Este email ya está registrado en la red.';
+                : 'Este email ya está registrado en la red. Si es tu cuenta, inicia sesión o recupera tu contraseña.';
+        } elseif (DB::one('SELECT id FROM users WHERE email = ? LIMIT 1', [$old['email']])) {
+            $errors['email'] = 'Este email ya tiene una cuenta. Inicia sesión o recupera tu contraseña.';
         }
     }
 
@@ -61,7 +68,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($i > 999) { $slug = $base . '-' . bin2hex(random_bytes(3)); break; }
         }
 
+        // Crear usuario con rol professional (status=pending; se activa al aprobar el perfil).
+        $user_id = DB::insert('users', [
+            'email' => $old['email'],
+            'password_hash' => password_hash($old['password'], PASSWORD_DEFAULT),
+            'role' => 'professional',
+            'name' => $old['name'],
+            'status' => 'pending',
+            'notifications_opt_in' => $old['notifications_opt_in'],
+        ]);
+
         $id = DB::insert('professionals', [
+            'user_id'  => $user_id,
             'slug'     => $slug,
             'name'     => $old['name'],
             'title'    => $old['title'],
@@ -94,6 +112,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $old = [
             'name'=>'','email'=>'','title'=>'','city_id'=>'','type_id'=>'','disciplines'=>[],
             'specialties'=>'','bio'=>'','linkedin'=>'','website'=>'',
+            'password'=>'','password_confirm'=>'',
             'visibility_email'=>1,'visibility_linkedin'=>1,'visibility_website'=>1,
             'notifications_opt_in'=>1,'accept_terms'=>0,
         ];
@@ -158,6 +177,18 @@ include __DIR__ . '/includes/header.php';
           <div>
             <label class="block text-sm font-semibold mb-1">Email de contacto <span class="text-coral">*</span></label>
             <input name="email" type="email" required value="<?= e($old['email']) ?>" class="w-full border <?= isset($errors['email'])?'border-coral':'border-gray-300' ?> rounded px-3 py-2 focus:border-naranja focus:ring-1 focus:ring-naranja outline-none" />
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+          <div>
+            <label class="block text-sm font-semibold mb-1">Contraseña <span class="text-coral">*</span></label>
+            <input name="password" type="password" required minlength="8" class="w-full border <?= isset($errors['password'])?'border-coral':'border-gray-300' ?> rounded px-3 py-2 focus:border-naranja focus:ring-1 focus:ring-naranja outline-none" />
+            <p class="text-xs text-gris-oscuro mt-1">Mínimo 8 caracteres. La usarás para editar tu perfil.</p>
+          </div>
+          <div>
+            <label class="block text-sm font-semibold mb-1">Confirmar contraseña <span class="text-coral">*</span></label>
+            <input name="password_confirm" type="password" required minlength="8" class="w-full border <?= isset($errors['password'])?'border-coral':'border-gray-300' ?> rounded px-3 py-2 focus:border-naranja focus:ring-1 focus:ring-naranja outline-none" />
           </div>
         </div>
 
