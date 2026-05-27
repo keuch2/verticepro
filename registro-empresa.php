@@ -6,8 +6,8 @@ if (session_status() !== PHP_SESSION_ACTIVE) session_start();
 $errors = [];
 $old = [
     'name' => '', 'email' => '', 'description' => '',
-    'sector_id' => '', 'country_id' => '', 'department_id' => '', 'city_id' => '',
-    'size' => '', 'founded_year' => '', 'website' => '', 'phone' => '',
+    'sectors' => [], 'country_id' => '', 'department_id' => '', 'city_id' => '',
+    'founded_year' => '', 'website' => '', 'phone' => '',
     'password' => '', 'password_confirm' => '',
     'visibility_email' => 1, 'visibility_website' => 1, 'visibility_phone' => 0,
     'notifications_opt_in' => 1, 'accept_terms' => 0,
@@ -20,11 +20,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $old['name']         = trim($_POST['name'] ?? '');
     $old['email']        = trim($_POST['email'] ?? '');
     $old['description']  = trim($_POST['description'] ?? '');
-    $old['sector_id']    = $_POST['sector_id'] ?? '';
+    $old['sectors']      = array_map('intval', (array)($_POST['sectors'] ?? []));
     $old['country_id']   = $_POST['country_id'] ?? '';
     $old['department_id']= $_POST['department_id'] ?? '';
     $old['city_id']      = $_POST['city_id'] ?? '';
-    $old['size']         = $_POST['size'] ?? '';
     $old['founded_year'] = trim($_POST['founded_year'] ?? '');
     $old['website']      = trim($_POST['website'] ?? '');
     $old['phone']        = trim($_POST['phone'] ?? '');
@@ -41,7 +40,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     elseif ($old['password'] !== $old['password_confirm'])    $errors['password'] = 'Las contraseñas no coinciden.';
     if ($old['name'] === '')                                  $errors['name'] = 'Indícanos el nombre de la empresa.';
     if ($old['email'] === '' || !filter_var($old['email'], FILTER_VALIDATE_EMAIL)) $errors['email'] = 'Necesitamos un email válido para contactarte.';
-    if ($old['sector_id'] === '')                             $errors['sector_id'] = 'Selecciona un sector.';
+    if (empty($old['sectors']))                                $errors['sectors'] = 'Selecciona al menos un sector.';
     if ($old['country_id'] === '')                            $errors['country_id'] = 'Selecciona un país.';
     if ($old['description'] !== '' && mb_strlen($old['description']) > 2000) $errors['description'] = 'La descripción no puede superar los 2000 caracteres.';
     if ($old['website'] !== '' && !preg_match('#^https?://#i', $old['website'])) $errors['website'] = 'Debe empezar con http(s)://';
@@ -78,15 +77,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'notifications_opt_in' => $old['notifications_opt_in'],
         ]);
 
-        DB::insert('companies', [
+        $primary_sector = !empty($old['sectors']) ? (int)$old['sectors'][0] : null;
+        $cid = DB::insert('companies', [
             'user_id'      => $user_id,
             'slug'         => $slug,
             'name'         => $old['name'],
             'description'  => $old['description'] ?: null,
-            'sector_id'    => (int)$old['sector_id'],
+            'sector_id'    => $primary_sector,
             'country_id'   => (int)$old['country_id'],
             'city_id'      => $old['city_id'] !== '' ? (int)$old['city_id'] : null,
-            'size'         => $old['size'] ?: null,
             'founded_year' => $old['founded_year'] !== '' ? (int)$old['founded_year'] : null,
             'website'      => $old['website'] ?: null,
             'phone'        => $old['phone'] ?: null,
@@ -99,10 +98,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'status'       => 'pending',
         ]);
 
+        // Sectores (M:N)
+        if (!empty($old['sectors'])) {
+            CompanyRepo::setSectors($cid, $old['sectors']);
+        }
+
         $submitted_ok = true;
         $old = [
-            'name'=>'','email'=>'','description'=>'','sector_id'=>'','country_id'=>'',
-            'department_id'=>'','city_id'=>'','size'=>'','founded_year'=>'','website'=>'','phone'=>'',
+            'name'=>'','email'=>'','description'=>'','sectors'=>[],'country_id'=>'',
+            'department_id'=>'','city_id'=>'','founded_year'=>'','website'=>'','phone'=>'',
             'password'=>'','password_confirm'=>'',
             'visibility_email'=>1,'visibility_website'=>1,'visibility_phone'=>0,
             'notifications_opt_in'=>1,'accept_terms'=>0,
@@ -188,25 +192,17 @@ include __DIR__ . '/includes/header.php';
           </div>
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
-          <div>
-            <label class="block text-sm font-semibold mb-1">Sector <span class="text-coral">*</span></label>
-            <select name="sector_id" required class="w-full border <?= isset($errors['sector_id'])?'border-coral':'border-gray-300' ?> rounded px-3 py-2 bg-white">
-              <option value="">— Selecciona —</option>
-              <?php foreach ($sectors as $s): ?>
-                <option value="<?= (int)$s['id'] ?>" <?= (string)$old['sector_id'] === (string)$s['id'] ? 'selected' : '' ?>><?= e($s['name']) ?></option>
-              <?php endforeach; ?>
-            </select>
+        <div>
+          <label class="block text-sm font-semibold mb-2">Sectores <span class="text-coral">*</span></label>
+          <div class="grid grid-cols-2 md:grid-cols-3 gap-2">
+            <?php foreach ($sectors as $s): $checked = in_array((int)$s['id'], $old['sectors'], true); ?>
+              <label class="flex items-center gap-2 border <?= $checked ? 'border-naranja bg-naranja/5' : 'border-gray-200' ?> rounded px-3 py-2 cursor-pointer hover:border-naranja transition text-sm">
+                <input type="checkbox" name="sectors[]" value="<?= (int)$s['id'] ?>" <?= $checked ? 'checked' : '' ?> class="accent-naranja" />
+                <span><?= e($s['name']) ?></span>
+              </label>
+            <?php endforeach; ?>
           </div>
-          <div>
-            <label class="block text-sm font-semibold mb-1">Tamaño</label>
-            <select name="size" class="w-full border border-gray-300 rounded px-3 py-2 bg-white">
-              <option value="">— Selecciona —</option>
-              <?php foreach (['1-10','11-50','51-200','200+'] as $sz): ?>
-                <option value="<?= e($sz) ?>" <?= $old['size'] === $sz ? 'selected' : '' ?>><?= e($sz) ?> empleados</option>
-              <?php endforeach; ?>
-            </select>
-          </div>
+          <p class="text-xs text-gris-oscuro mt-1">Puedes seleccionar más de uno. El primero será el principal.</p>
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
@@ -289,25 +285,47 @@ include __DIR__ . '/includes/header.php';
 
       <script>
         // Cascading selects: País → Departamento → Ciudad
+        // Cuando el país no tiene departamentos/ciudades, se muestra "No aplica" como única opción.
         (function() {
           const country = document.getElementById('country-select');
           const dept    = document.getElementById('department-select');
           const city    = document.getElementById('city-select');
           if (!country || !dept || !city) return;
+
+          function applyNoAplica(select, hasMatches) {
+            const placeholder = select.querySelector('option[value=""]');
+            if (!placeholder) return;
+            if (hasMatches) {
+              placeholder.textContent = '— Selecciona —';
+            } else {
+              placeholder.textContent = 'No aplica para este país';
+              select.value = '';
+            }
+          }
+
           function sync() {
             const c = country.value, d = dept.value;
+            let deptMatches = 0;
             Array.from(dept.options).forEach(o => {
               if (!o.value) return;
-              o.hidden = o.dataset.country !== c;
+              const match = o.dataset.country === c;
+              o.hidden = !match;
+              if (match) deptMatches++;
               if (o.hidden && o.selected) { dept.value = ''; }
             });
+            applyNoAplica(dept, deptMatches > 0);
+
+            let cityMatches = 0;
             Array.from(city.options).forEach(o => {
               if (!o.value) return;
               const matchCountry = o.dataset.country === c;
               const matchDept = !d || o.dataset.department === d;
-              o.hidden = !(matchCountry && matchDept);
+              const match = matchCountry && matchDept;
+              o.hidden = !match;
+              if (match) cityMatches++;
               if (o.hidden && o.selected) { city.value = ''; }
             });
+            applyNoAplica(city, cityMatches > 0);
           }
           country.addEventListener('change', sync);
           dept.addEventListener('change', sync);

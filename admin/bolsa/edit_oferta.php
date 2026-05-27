@@ -20,6 +20,12 @@ if ($_SERVER['REQUEST_METHOD']==='POST') {
         'status' => post('status','draft'),
     ];
     if (!$data['title'] || !$data['company_id']) { flash('err','Título y empresa requeridos'); redirect('/admin/bolsa/edit_oferta.php'.($id?"?id=$id":'')); }
+
+    if (!empty($_FILES['flyer']['name'])) {
+        $rel = upload_image($_FILES['flyer'], 'flyers', $data['slug']);
+        if ($rel) $data['flyer_image'] = $rel;
+    }
+
     if ($is_new) { $id = DB::insert('job_offers', $data); flash('ok','Oferta creada'); }
     else         { DB::update('job_offers', $data, ['id'=>$id]); flash('ok','Oferta actualizada'); }
     redirect('/admin/bolsa/edit_oferta.php?id='.$id);
@@ -36,7 +42,7 @@ include __DIR__ . '/../_layout.php';
     <a href="<?= e(u('/admin/bolsa/')) ?>" class="btn secondary">Volver</a>
   </div>
 </div>
-<form method="post" class="card">
+<form method="post" enctype="multipart/form-data" class="card">
   <input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>" />
   <div class="form-grid">
     <div><label>Título</label><input name="title" required value="<?= e($o['title']??'') ?>" /></div>
@@ -58,6 +64,10 @@ include __DIR__ . '/../_layout.php';
       <div><label>Salario max (€/año)</label><input type="number" name="salary_max" value="<?= e($o['salary_max']??'') ?>" /></div>
     </div>
     <div><label>Fecha publicación</label><input type="datetime-local" name="published_at" value="<?= $o?date('Y-m-d\TH:i',strtotime($o['published_at']??'now')):'' ?>" /></div>
+    <div><label>Flyer / imagen</label>
+      <?php if (!empty($o['flyer_image'])): ?><div><img src="<?= e(img_url($o['flyer_image'])) ?>" style="max-height:160px;border:1px solid #ddd;" /></div><?php endif; ?>
+      <input type="file" name="flyer" accept="image/*" />
+    </div>
     <button class="btn" type="submit"><?= $is_new?'Crear':'Guardar' ?></button>
   </div>
 </form>

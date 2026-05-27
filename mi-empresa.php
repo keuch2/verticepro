@@ -33,10 +33,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $data = [
                     'name'         => trim($_POST['name'] ?? ''),
                     'description'  => trim($_POST['description'] ?? '') ?: null,
-                    'sector_id'    => !empty($_POST['sector_id']) ? (int)$_POST['sector_id'] : null,
+                    // sector_id se sincroniza desde sectors[] más abajo
                     'country_id'   => !empty($_POST['country_id']) ? (int)$_POST['country_id'] : null,
                     'city_id'      => !empty($_POST['city_id']) ? (int)$_POST['city_id'] : null,
-                    'size'         => $_POST['size'] ?? null,
                     'founded_year' => !empty($_POST['founded_year']) ? (int)$_POST['founded_year'] : null,
                     'website'      => trim($_POST['website'] ?? '') ?: null,
                     'phone'        => trim($_POST['phone'] ?? '') ?: null,
@@ -53,6 +52,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     if ($rel) $data['logo_image'] = $rel;
                 }
                 DB::update('companies', $data, ['id' => (int)$c['id']]);
+                // Sectores (M:N) — sincroniza también sector_id como "principal"
+                if (isset($_POST['sectors'])) {
+                    CompanyRepo::setSectors((int)$c['id'], (array)$_POST['sectors']);
+                }
                 if (!empty($c['user_id'])) DB::update('users', ['name' => $data['name']], ['id' => (int)$c['user_id']]);
                 $ok = 'Datos actualizados.';
                 $tab = 'datos';
@@ -77,17 +80,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $slug = $base . '-' . $i++;
                     if ($i > 999) { $slug = $base . '-' . bin2hex(random_bytes(3)); break; }
                 }
+                $flyer = null;
+                if (!empty($_FILES['flyer']['name'])) {
+                    $rel = upload_image($_FILES['flyer'], 'flyers', $slug);
+                    if ($rel) $flyer = $rel;
+                }
                 DB::insert('job_offers', [
                     'company_id'  => (int)$c['id'],
                     'slug'        => $slug,
                     'title'       => $title,
                     'description' => $description,
+                    'flyer_image' => $flyer,
                     'category'    => $category,
                     'modality'    => $modality,
                     'country_id'  => $country_id,
                     'salary_min'  => $salary_min,
                     'salary_max'  => $salary_max,
-                    'status'      => 'published', // publicación inmediata para empresas activas (inicialmente sin costo)
+                    'status'      => 'published',
                     'published_at'=> date('Y-m-d H:i:s'),
                 ]);
                 $ok = 'Oferta publicada.';
@@ -201,38 +210,46 @@ function tab_link_emp(string $t, string $current, string $label, ?int $count = n
       <textarea name="description" rows="5" maxlength="2000" class="w-full border border-gray-300 rounded px-3 py-2"><?= e($c['description'] ?? '') ?></textarea>
     </div>
 
+    <div>
+      <?php $current_sectors = CompanyRepo::sectorIds((int)$c['id']); ?>
+      <label class="block text-sm font-semibold mb-2">Sectores</label>
+      <div class="grid grid-cols-2 md:grid-cols-3 gap-2">
+        <?php foreach ($sectors as $s): $checked = in_array((int)$s['id'], $current_sectors, true); ?>
+          <label class="flex items-center gap-2 border <?= $checked ? 'border-naranja bg-naranja/5' : 'border-gray-200' ?> rounded px-3 py-2 cursor-pointer hover:border-naranja transition text-sm">
+            <input type="checkbox" name="sectors[]" value="<?= (int)$s['id'] ?>" <?= $checked ? 'checked' : '' ?> class="accent-naranja" />
+            <span><?= e($s['name']) ?></span>
+          </label>
+        <?php endforeach; ?>
+      </div>
+    </div>
+
     <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
       <div>
-        <label class="block text-sm font-semibold mb-1">Sector</label>
-        <select name="sector_id" class="w-full border border-gray-300 rounded px-3 py-2 bg-white">
-          <option value="">—</option>
-          <?php foreach ($sectors as $s): ?><option value="<?= (int)$s['id'] ?>" <?= (int)($c['sector_id'] ?? 0) === (int)$s['id'] ? 'selected' : '' ?>><?= e($s['name']) ?></option><?php endforeach; ?>
-        </select>
-      </div>
-      <div>
         <label class="block text-sm font-semibold mb-1">País</label>
-        <select name="country_id" class="w-full border border-gray-300 rounded px-3 py-2 bg-white">
+        <select id="me-country" name="country_id" class="w-full border border-gray-300 rounded px-3 py-2 bg-white">
           <option value="">—</option>
           <?php foreach ($countries as $cc): ?><option value="<?= (int)$cc['id'] ?>" <?= (int)($c['country_id'] ?? 0) === (int)$cc['id'] ? 'selected' : '' ?>><?= e($cc['name']) ?></option><?php endforeach; ?>
         </select>
       </div>
       <div>
+        <label class="block text-sm font-semibold mb-1">Departamento</label>
+        <select id="me-dept" name="department_id" class="w-full border border-gray-300 rounded px-3 py-2 bg-white">
+          <option value="">— Selecciona —</option>
+          <?php $departments_me = SectionRepo::departments(); foreach ($departments_me as $d): ?>
+            <option value="<?= (int)$d['id'] ?>" data-country="<?= (int)$d['country_id'] ?>"><?= e($d['name']) ?></option>
+          <?php endforeach; ?>
+        </select>
+      </div>
+      <div>
         <label class="block text-sm font-semibold mb-1">Ciudad</label>
-        <select name="city_id" class="w-full border border-gray-300 rounded px-3 py-2 bg-white">
-          <option value="">—</option>
-          <?php foreach ($cities as $ci): ?><option value="<?= (int)$ci['id'] ?>" <?= (int)($c['city_id'] ?? 0) === (int)$ci['id'] ? 'selected' : '' ?>><?= e($ci['name']) ?></option><?php endforeach; ?>
+        <select id="me-city" name="city_id" class="w-full border border-gray-300 rounded px-3 py-2 bg-white">
+          <option value="">— Selecciona —</option>
+          <?php foreach ($cities as $ci): ?><option value="<?= (int)$ci['id'] ?>" data-country="<?= (int)$ci['country_id'] ?>" data-department="<?= (int)($ci['department_id'] ?? 0) ?>" <?= (int)($c['city_id'] ?? 0) === (int)$ci['id'] ? 'selected' : '' ?>><?= e($ci['name']) ?></option><?php endforeach; ?>
         </select>
       </div>
     </div>
 
-    <div class="grid grid-cols-1 md:grid-cols-4 gap-5">
-      <div>
-        <label class="block text-sm font-semibold mb-1">Tamaño</label>
-        <select name="size" class="w-full border border-gray-300 rounded px-3 py-2 bg-white">
-          <option value="">—</option>
-          <?php foreach (['1-10','11-50','51-200','200+'] as $sz): ?><option value="<?= e($sz) ?>" <?= ($c['size'] ?? '') === $sz ? 'selected' : '' ?>><?= e($sz) ?></option><?php endforeach; ?>
-        </select>
-      </div>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
       <div>
         <label class="block text-sm font-semibold mb-1">Año fundación</label>
         <input name="founded_year" value="<?= e($c['founded_year'] ?? '') ?>" class="w-full border border-gray-300 rounded px-3 py-2" />
@@ -246,6 +263,31 @@ function tab_link_emp(string $t, string $current, string $label, ?int $count = n
         <input name="phone" value="<?= e($c['phone'] ?? '') ?>" placeholder="+595 21 XXX XXX" class="w-full border border-gray-300 rounded px-3 py-2" />
       </div>
     </div>
+
+    <script>
+      (function() {
+        const c = document.getElementById('me-country');
+        const d = document.getElementById('me-dept');
+        const ci = document.getElementById('me-city');
+        if (!c || !d || !ci) return;
+        function applyNoAplica(sel, has) {
+          const ph = sel.querySelector('option[value=""]');
+          if (!ph) return;
+          if (has) ph.textContent = '— Selecciona —';
+          else { ph.textContent = 'No aplica para este país'; sel.value = ''; }
+        }
+        function sync() {
+          const cv = c.value, dv = d.value;
+          let dMatches = 0;
+          Array.from(d.options).forEach(o => { if (!o.value) return; const m = o.dataset.country === cv; o.hidden = !m; if (m) dMatches++; if (o.hidden && o.selected) d.value = ''; });
+          applyNoAplica(d, dMatches > 0);
+          let cMatches = 0;
+          Array.from(ci.options).forEach(o => { if (!o.value) return; const m = (o.dataset.country === cv) && (!dv || o.dataset.department === dv); o.hidden = !m; if (m) cMatches++; if (o.hidden && o.selected) ci.value = ''; });
+          applyNoAplica(ci, cMatches > 0);
+        }
+        c.addEventListener('change', sync); d.addEventListener('change', sync); sync();
+      })();
+    </script>
 
     <div>
       <label class="block text-sm font-semibold mb-1">Logo</label>
@@ -274,7 +316,7 @@ function tab_link_emp(string $t, string $current, string $label, ?int $count = n
   <details class="bg-white border border-gray-200 rounded-lg p-6 mb-6" <?= $c['status']==='active' ? 'open' : '' ?>>
     <summary class="font-bold cursor-pointer">+ Publicar nueva oferta</summary>
     <?php if ($c['status'] === 'active'): ?>
-    <form method="post" class="mt-4 space-y-4">
+    <form method="post" enctype="multipart/form-data" class="mt-4 space-y-4">
       <input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>" />
       <input type="hidden" name="action" value="publish_offer" />
       <div><label class="block text-sm font-semibold mb-1">Título *</label><input name="title" required class="w-full border border-gray-300 rounded px-3 py-2" /></div>
@@ -297,6 +339,11 @@ function tab_link_emp(string $t, string $current, string $label, ?int $count = n
         <div><label class="block text-sm font-semibold mb-1">Salario mínimo (Gs.)</label><input name="salary_min" type="number" class="w-full border border-gray-300 rounded px-3 py-2" /></div>
         <div><label class="block text-sm font-semibold mb-1">Salario máximo (Gs.)</label><input name="salary_max" type="number" class="w-full border border-gray-300 rounded px-3 py-2" /></div>
       </div>
+      <div>
+        <label class="block text-sm font-semibold mb-1">Flyer / imagen (opcional)</label>
+        <input name="flyer" type="file" accept="image/*" class="w-full border border-gray-300 rounded px-3 py-2 text-sm" />
+        <p class="text-xs text-gris-oscuro mt-1">Se mostrará en la Bolsa y en tu perfil de empresa.</p>
+      </div>
       <button class="bg-naranja text-white font-semibold px-6 py-2.5 rounded hover:bg-orange-600 transition" type="submit">Publicar oferta</button>
     </form>
     <?php endif; ?>
@@ -309,12 +356,17 @@ function tab_link_emp(string $t, string $current, string $label, ?int $count = n
       <?php foreach ($my_offers as $o): $interest_count = DB::one('SELECT COUNT(*) n FROM job_interests WHERE offer_id = ?', [(int)$o['id']])['n'] ?? 0; ?>
         <li class="bg-white border border-gray-200 rounded-lg p-5">
           <div class="flex flex-wrap items-start justify-between gap-3">
-            <div>
-              <h3 class="font-bold text-lg"><?= e($o['title']) ?></h3>
-              <p class="text-xs text-gris-oscuro mt-1">
-                <span class="font-semibold uppercase"><?= e($o['status']) ?></span> ·
-                <?= e($o['modality']) ?> · <?= e($o['category'] ?? '—') ?> · publicada <?= e(format_date($o['created_at'])) ?>
-              </p>
+            <div class="flex items-start gap-3 min-w-0">
+              <?php if (!empty($o['flyer_image'])): ?>
+                <img src="<?= e(img_url($o['flyer_image'])) ?>" alt="" class="w-16 h-16 object-cover rounded border border-gray-200 shrink-0" />
+              <?php endif; ?>
+              <div class="min-w-0">
+                <h3 class="font-bold text-lg"><?= e($o['title']) ?></h3>
+                <p class="text-xs text-gris-oscuro mt-1">
+                  <span class="font-semibold uppercase"><?= e($o['status']) ?></span> ·
+                  <?= e($o['modality']) ?> · <?= e($o['category'] ?? '—') ?> · publicada <?= e(format_date($o['created_at'])) ?>
+                </p>
+              </div>
             </div>
             <div class="text-right">
               <a href="<?= e(u('/mi-empresa?tab=interesados&offer=' . (int)$o['id'])) ?>" class="text-sm text-azul font-semibold hover:underline"><?= (int)$interest_count ?> interesado<?= (int)$interest_count === 1 ? '' : 's' ?> →</a>

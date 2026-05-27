@@ -12,7 +12,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         'title' => trim(post('title','')),
         'bio' => trim(post('bio','')) ?: null,
         'city_id' => post_int('city_id'),
-        'type_id' => post_int('type_id'),
+        // type_id se sincroniza más abajo desde el multi-select 'types[]'
+        'type_id' => (!empty($_POST['types']) && is_array($_POST['types'])) ? (int)$_POST['types'][0] : null,
         'email' => trim(post('email','')) ?: null,
         'linkedin' => trim(post('linkedin','')) ?: null,
         'website' => trim(post('website','')) ?: null,
@@ -54,6 +55,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 
+    // Tipos (M:N)
+    ProfessionalRepo::setTypes($id, (array)($_POST['types'] ?? []));
+
     // Disciplinas
     DB::run('DELETE FROM professional_disciplines WHERE professional_id = ?', [$id]);
     foreach ((array)($_POST['disciplines'] ?? []) as $did) {
@@ -69,7 +73,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 if (isset($_GET['delete']) && $id) { csrf_check(); DB::delete('professionals', ['id'=>$id]); flash('ok','Eliminado'); redirect('/admin/profesionales/'); }
 
-$current_disc = $id ? array_column(DB::all('SELECT discipline_id FROM professional_disciplines WHERE professional_id=?',[$id]),'discipline_id') : [];
+$current_disc  = $id ? array_column(DB::all('SELECT discipline_id FROM professional_disciplines WHERE professional_id=?',[$id]),'discipline_id') : [];
+$current_types = $id ? ProfessionalRepo::typeIds($id) : [];
 $specs_csv = $id ? implode(', ', ProfessionalRepo::specialties($id)) : '';
 $page_title = $is_new?'Nuevo profesional':'Editar profesional';
 include __DIR__ . '/../_layout.php';
@@ -95,7 +100,13 @@ include __DIR__ . '/../_layout.php';
     <div><label>Bio</label><textarea name="bio" rows="5"><?= e($p['bio']??'') ?></textarea></div>
     <div class="form-grid cols-2">
       <div><label>Ciudad</label><select name="city_id"><option value="">—</option><?= opts(SectionRepo::cities(),'id','name',$p['city_id']??null) ?></select></div>
-      <div><label>Tipo</label><select name="type_id"><option value="">—</option><?= opts(SectionRepo::profTypes(),'id','name',$p['type_id']??null) ?></select></div>
+      <div><label>Tipos (multi)</label>
+        <div style="display:flex;flex-wrap:wrap;gap:10px;">
+          <?php foreach (SectionRepo::profTypes() as $t): ?>
+            <label style="font-weight:400;"><input type="checkbox" name="types[]" value="<?= (int)$t['id'] ?>" <?= in_array((int)$t['id'], $current_types, true) ? 'checked' : '' ?> style="width:auto;margin-right:4px;" /><?= e($t['name']) ?></label>
+          <?php endforeach; ?>
+        </div>
+      </div>
     </div>
     <div>
       <label>Disciplinas (multi)</label>

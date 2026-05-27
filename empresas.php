@@ -21,14 +21,12 @@ include __DIR__ . '/includes/header.php';
   </section>
 
   <section id="filter-area" class="max-w-7xl mx-auto px-6 py-8">
-    <div class="flex flex-wrap gap-2 mb-4" data-filter-group="sector">
-      <button data-filter="todos" class="px-4 py-1.5 rounded-full border border-naranja bg-naranja text-white text-sm font-semibold">Todos</button>
-      <?php foreach ($sectors as $s): ?>
-        <button data-filter="<?= e($s['slug']) ?>" class="px-4 py-1.5 rounded-full border border-gray-300 text-gris-oscuro text-sm font-semibold"><?= e($s['name']) ?></button>
-      <?php endforeach; ?>
-    </div>
     <div class="flex flex-wrap gap-3 items-center">
       <input type="search" data-filter-axis="search" placeholder="Buscar por nombre, descripción…" class="border border-gray-300 rounded px-3 py-1.5 text-sm w-64" />
+      <select data-filter-axis="sector" class="border border-gray-300 rounded px-3 py-1.5 text-sm">
+        <option value="">Todos los sectores</option>
+        <?php foreach ($sectors as $s): ?><option value="<?= e($s['slug']) ?>"><?= e($s['name']) ?></option><?php endforeach; ?>
+      </select>
       <select data-filter-axis="departamento" class="border border-gray-300 rounded px-3 py-1.5 text-sm">
         <option value="">Todos los departamentos</option>
         <?php foreach ($departments as $d): ?><option value="<?= e($d['slug']) ?>"><?= e($d['name']) ?></option><?php endforeach; ?>

@@ -19,6 +19,12 @@ if ($_SERVER['REQUEST_METHOD']==='POST') {
         'status' => post('status','draft'),
     ];
     if (!$data['title'] || !$data['professional_id']) { flash('err','Título y profesional requeridos'); redirect('/admin/bolsa/edit_servicio.php'.($id?"?id=$id":'')); }
+
+    if (!empty($_FILES['flyer']['name'])) {
+        $rel = upload_image($_FILES['flyer'], 'flyers', $data['slug']);
+        if ($rel) $data['flyer_image'] = $rel;
+    }
+
     if ($is_new) { $id = DB::insert('services', $data); flash('ok','Servicio creado'); }
     else         { DB::update('services', $data, ['id'=>$id]); flash('ok','Servicio actualizado'); }
     redirect('/admin/bolsa/edit_servicio.php?id='.$id);
@@ -35,7 +41,7 @@ include __DIR__ . '/../_layout.php';
     <a href="<?= e(u('/admin/bolsa/?tab=servicios')) ?>" class="btn secondary">Volver</a>
   </div>
 </div>
-<form method="post" class="card">
+<form method="post" enctype="multipart/form-data" class="card">
   <input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>" />
   <div class="form-grid">
     <div><label>Título</label><input name="title" required value="<?= e($s['title']??'') ?>" /></div>
@@ -55,6 +61,10 @@ include __DIR__ . '/../_layout.php';
     <div class="form-grid cols-2">
       <div><label>Estado</label><select name="status"><?php foreach (['draft','published','closed'] as $st): ?><option value="<?= $st ?>" <?= ($s['status']??'')===$st?'selected':'' ?>><?= $st ?></option><?php endforeach; ?></select></div>
       <div><label>Publicado</label><input type="datetime-local" name="published_at" value="<?= $s?date('Y-m-d\TH:i',strtotime($s['published_at']??'now')):'' ?>" /></div>
+    </div>
+    <div><label>Flyer / imagen</label>
+      <?php if (!empty($s['flyer_image'])): ?><div><img src="<?= e(img_url($s['flyer_image'])) ?>" style="max-height:160px;border:1px solid #ddd;" /></div><?php endif; ?>
+      <input type="file" name="flyer" accept="image/*" />
     </div>
     <button class="btn" type="submit"><?= $is_new?'Crear':'Guardar' ?></button>
   </div>

@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/includes/bootstrap.php';
+require_once __DIR__ . '/includes/image.php';
 if (session_status() !== PHP_SESSION_ACTIVE) session_start();
 
 $errors = [];
@@ -35,11 +36,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $slug = $base . '-' . $i++;
             if ($i > 999) { $slug = $base . '-' . bin2hex(random_bytes(3)); break; }
         }
+        $flyer = null;
+        if (!empty($_FILES['flyer']['name'])) {
+            $rel = upload_image($_FILES['flyer'], 'flyers', $slug);
+            if ($rel) $flyer = $rel;
+        }
         DB::insert('services', [
             'professional_id' => (int)$prof['id'],
             'slug'            => $slug,
             'title'           => $old['title'],
             'description'     => $old['description'],
+            'flyer_image'     => $flyer,
             'category'        => $old['category'] ?: null,
             'modality'        => $old['modality'] ?: null,
             'country_id'      => $old['country_id'] !== '' ? (int)$old['country_id'] : null,
@@ -74,7 +81,7 @@ include __DIR__ . '/includes/header.php';
         <ul class="list-disc pl-5"><?php foreach ($errors as $err): ?><li><?= e($err) ?></li><?php endforeach; ?></ul>
       </div>
     <?php endif; ?>
-    <form method="post" novalidate class="bg-white border border-gray-200 rounded-lg p-6 mt-6 space-y-5">
+    <form method="post" enctype="multipart/form-data" novalidate class="bg-white border border-gray-200 rounded-lg p-6 mt-6 space-y-5">
       <input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>" />
 
       <div>
@@ -115,6 +122,12 @@ include __DIR__ . '/includes/header.php';
             <?php endforeach; ?>
           </select>
         </div>
+      </div>
+
+      <div>
+        <label class="block text-sm font-semibold mb-1">Flyer / imagen del servicio (opcional)</label>
+        <input name="flyer" type="file" accept="image/*" class="w-full border border-gray-300 rounded px-3 py-2 text-sm" />
+        <p class="text-xs text-gris-oscuro mt-1">Se mostrará junto a tu servicio en la Bolsa. Recomendado: JPG/PNG/WebP, máx 8 MB.</p>
       </div>
 
       <button type="submit" class="bg-naranja text-white font-semibold px-6 py-2.5 rounded hover:bg-orange-600 transition">Enviar para revisión</button>

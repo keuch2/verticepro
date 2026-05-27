@@ -54,9 +54,10 @@ include __DIR__ . '/includes/header.php';
         $disc = ProfessionalRepo::primaryDisciplineSlug((int)$p['id']);
         $pc = section_color($disc ?: 'seguridad');
         $specialties = implode(' ', ProfessionalRepo::specialties((int)$p['id']));
+        $type_names  = implode(' ', array_column(ProfessionalRepo::types((int)$p['id']), 'name'));
         $search_blob = strtolower(trim(
           ($p['name'] ?? '') . ' ' . ($p['title'] ?? '') . ' ' . ($p['bio'] ?? '') . ' ' .
-          ($p['city_name'] ?? '') . ' ' . ($p['type_name'] ?? '') . ' ' . $specialties
+          ($p['city_name'] ?? '') . ' ' . ($p['type_name'] ?? '') . ' ' . $type_names . ' ' . $specialties
         )); ?>
         <article data-card
                  data-disciplina="<?= e($disc) ?>"
@@ -77,7 +78,11 @@ include __DIR__ . '/includes/header.php';
           </div>
           <p class="text-sm text-gris-oscuro mt-4"><?= e($p['bio'] ? mb_strimwidth($p['bio'], 0, 140, '…') : '') ?></p>
           <div class="flex items-center justify-between mt-4">
-            <span class="text-xs px-2 py-0.5 rounded-full bg-<?= e($pc) ?>/10 text-<?= e($pc) ?> font-semibold"><?= e($p['type_name'] ?? '') ?></span>
+            <?php $all_types = ProfessionalRepo::types((int)$p['id']);
+                  $type_label = $all_types
+                    ? implode(' · ', array_column($all_types, 'name'))
+                    : ($p['type_name'] ?? ''); ?>
+            <span class="text-xs px-2 py-0.5 rounded-full bg-<?= e($pc) ?>/10 text-<?= e($pc) ?> font-semibold"><?= e($type_label) ?></span>
             <a href="<?= e(profile_url($p)) ?>" class="text-sm text-naranja font-semibold hover:underline">Ver perfil →</a>
           </div>
         </article>

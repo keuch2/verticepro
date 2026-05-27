@@ -6,7 +6,7 @@ if (session_status() !== PHP_SESSION_ACTIVE) session_start();
 
 $errors = [];
 $old = [
-    'name' => '', 'email' => '', 'title' => '', 'city_id' => '', 'type_id' => '',
+    'name' => '', 'email' => '', 'title' => '', 'city_id' => '', 'types' => [],
     'disciplines' => [], 'specialties' => '', 'bio' => '', 'linkedin' => '', 'website' => '', 'phone' => '',
     'password' => '', 'password_confirm' => '',
     'visibility_email' => 1, 'visibility_linkedin' => 1, 'visibility_website' => 1, 'visibility_phone' => 0,
@@ -21,7 +21,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $old['email']       = trim($_POST['email'] ?? '');
     $old['title']       = trim($_POST['title'] ?? '');
     $old['city_id']     = $_POST['city_id'] ?? '';
-    $old['type_id']     = $_POST['type_id'] ?? '';
+    $old['types']       = array_map('intval', (array)($_POST['types'] ?? []));
     $old['disciplines'] = array_map('intval', (array)($_POST['disciplines'] ?? []));
     $old['specialties'] = trim($_POST['specialties'] ?? '');
     $old['bio']         = trim($_POST['bio'] ?? '');
@@ -80,6 +80,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'notifications_opt_in' => $old['notifications_opt_in'],
         ]);
 
+        // Avatar (foto de perfil) — opcional
+        $avatar = null;
+        if (!empty($_FILES['avatar']['name'])) {
+            require_once __DIR__ . '/includes/image.php';
+            $rel = upload_image($_FILES['avatar'], 'profiles', $slug);
+            if ($rel) $avatar = $rel;
+        }
+
+        // Primer tipo seleccionado va como cache "primario" en professionals.type_id
+        $primary_type = !empty($old['types']) ? (int)$old['types'][0] : null;
+
         $id = DB::insert('professionals', [
             'user_id'  => $user_id,
             'slug'     => $slug,
@@ -87,7 +98,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'title'    => $old['title'],
             'bio'      => $old['bio'] ?: null,
             'city_id'  => $old['city_id'] !== '' ? (int)$old['city_id'] : null,
-            'type_id'  => $old['type_id'] !== '' ? (int)$old['type_id'] : null,
+            'type_id'  => $primary_type,
+            'avatar_image' => $avatar,
             'email'    => $old['email'],
             'linkedin' => $old['linkedin'] ?: null,
             'website'  => $old['website']  ?: null,
@@ -103,6 +115,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'status'   => 'pending',
         ]);
 
+        // Tipos M:N
+        if (!empty($old['types'])) {
+            ProfessionalRepo::setTypes($id, $old['types']);
+        }
+
         foreach ($old['disciplines'] as $did) {
             if ($did > 0) {
                 try { DB::insert('professional_disciplines', ['professional_id' => $id, 'discipline_id' => $did]); } catch (\Throwable $e) {}
@@ -114,7 +131,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         $submitted_ok = true;
         $old = [
-            'name'=>'','email'=>'','title'=>'','city_id'=>'','type_id'=>'','disciplines'=>[],
+            'name'=>'','email'=>'','title'=>'','city_id'=>'','types'=>[],'disciplines'=>[],
             'specialties'=>'','bio'=>'','linkedin'=>'','website'=>'','phone'=>'',
             'password'=>'','password_confirm'=>'',
             'visibility_email'=>1,'visibility_linkedin'=>1,'visibility_website'=>1,'visibility_phone'=>0,
@@ -124,8 +141,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 $cities      = SectionRepo::cities();
+$countries   = SectionRepo::countries();
+$departments = SectionRepo::departments();
 $types       = SectionRepo::profTypes();
 $disciplines = SectionRepo::disciplines();
+$default_country_id = (int)(DB::one("SELECT id FROM countries WHERE slug = 'paraguay'")['id'] ?? 0);
 
 $page_title = 'Únete a la Red — Vértice Pro';
 $page_active = 'registro.php';
@@ -170,7 +190,7 @@ include __DIR__ . '/includes/header.php';
         </div>
       <?php endif; ?>
 
-      <form method="post" novalidate class="bg-white border border-gray-200 rounded-lg p-6 space-y-5">
+      <form method="post" enctype="multipart/form-data" novalidate class="bg-white border border-gray-200 rounded-lg p-6 space-y-5">
         <input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>" />
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
@@ -201,27 +221,93 @@ include __DIR__ . '/includes/header.php';
           <input name="title" required value="<?= e($old['title']) ?>" placeholder="Ej: Consultora senior en gestión de SSL" class="w-full border <?= isset($errors['title'])?'border-coral':'border-gray-300' ?> rounded px-3 py-2 focus:border-naranja focus:ring-1 focus:ring-naranja outline-none" />
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+          <div>
+            <label class="block text-sm font-semibold mb-1">País</label>
+            <select id="reg-country" name="country_id" class="w-full border border-gray-300 rounded px-3 py-2 bg-white">
+              <?php foreach ($countries as $co): ?>
+                <option value="<?= (int)$co['id'] ?>" <?= $default_country_id === (int)$co['id'] ? 'selected' : '' ?>><?= e($co['name']) ?></option>
+              <?php endforeach; ?>
+            </select>
+          </div>
+          <div>
+            <label class="block text-sm font-semibold mb-1">Departamento</label>
+            <select id="reg-dept" name="department_id" class="w-full border border-gray-300 rounded px-3 py-2 bg-white">
+              <option value="">— Selecciona —</option>
+              <?php foreach ($departments as $d): ?>
+                <option value="<?= (int)$d['id'] ?>" data-country="<?= (int)$d['country_id'] ?>"><?= e($d['name']) ?></option>
+              <?php endforeach; ?>
+            </select>
+          </div>
           <div>
             <label class="block text-sm font-semibold mb-1">Ciudad</label>
-            <select name="city_id" class="w-full border border-gray-300 rounded px-3 py-2 focus:border-naranja focus:ring-1 focus:ring-naranja outline-none bg-white">
+            <select id="reg-city" name="city_id" class="w-full border border-gray-300 rounded px-3 py-2 bg-white">
               <option value="">— Selecciona —</option>
               <?php foreach ($cities as $c): ?>
-                <option value="<?= (int)$c['id'] ?>" <?= (string)$old['city_id'] === (string)$c['id'] ? 'selected' : '' ?>>
-                  <?= e($c['name']) ?><?= $c['country_name'] ? ', ' . e($c['country_name']) : '' ?>
-                </option>
+                <option value="<?= (int)$c['id'] ?>" data-country="<?= (int)$c['country_id'] ?>" data-department="<?= (int)($c['department_id'] ?? 0) ?>" <?= (string)$old['city_id'] === (string)$c['id'] ? 'selected' : '' ?>><?= e($c['name']) ?></option>
               <?php endforeach; ?>
             </select>
           </div>
-          <div>
-            <label class="block text-sm font-semibold mb-1">Tipo de profesional</label>
-            <select name="type_id" class="w-full border border-gray-300 rounded px-3 py-2 focus:border-naranja focus:ring-1 focus:ring-naranja outline-none bg-white">
-              <option value="">— Selecciona —</option>
-              <?php foreach ($types as $t): ?>
-                <option value="<?= (int)$t['id'] ?>" <?= (string)$old['type_id'] === (string)$t['id'] ? 'selected' : '' ?>><?= e($t['name']) ?></option>
-              <?php endforeach; ?>
-            </select>
+        </div>
+
+        <div>
+          <label class="block text-sm font-semibold mb-1">Foto de perfil</label>
+          <input type="file" name="avatar" accept="image/*" class="w-full border border-gray-300 rounded px-3 py-2 text-sm" />
+          <p class="text-xs text-gris-oscuro mt-1">Opcional. JPG/PNG/WebP, máx 8 MB.</p>
+        </div>
+
+        <script>
+          (function() {
+            const country = document.getElementById('reg-country');
+            const dept    = document.getElementById('reg-dept');
+            const city    = document.getElementById('reg-city');
+            if (!country || !dept || !city) return;
+            function applyNoAplica(select, hasMatches) {
+              const ph = select.querySelector('option[value=""]');
+              if (!ph) return;
+              if (hasMatches) ph.textContent = '— Selecciona —';
+              else { ph.textContent = 'No aplica para este país'; select.value = ''; }
+            }
+            function sync() {
+              const c = country.value, d = dept.value;
+              let dMatches = 0;
+              Array.from(dept.options).forEach(o => {
+                if (!o.value) return;
+                const match = o.dataset.country === c;
+                o.hidden = !match;
+                if (match) dMatches++;
+                if (o.hidden && o.selected) dept.value = '';
+              });
+              applyNoAplica(dept, dMatches > 0);
+              let cMatches = 0;
+              Array.from(city.options).forEach(o => {
+                if (!o.value) return;
+                const matchC = o.dataset.country === c;
+                const matchD = !d || o.dataset.department === d;
+                const match = matchC && matchD;
+                o.hidden = !match;
+                if (match) cMatches++;
+                if (o.hidden && o.selected) city.value = '';
+              });
+              applyNoAplica(city, cMatches > 0);
+            }
+            country.addEventListener('change', sync);
+            dept.addEventListener('change', sync);
+            sync();
+          })();
+        </script>
+
+        <div>
+          <label class="block text-sm font-semibold mb-2">Tipo(s) de profesional</label>
+          <div class="grid grid-cols-2 md:grid-cols-3 gap-2">
+            <?php foreach ($types as $t): $checked = in_array((int)$t['id'], $old['types'], true); ?>
+              <label class="flex items-center gap-2 border <?= $checked ? 'border-naranja bg-naranja/5' : 'border-gray-200' ?> rounded px-3 py-2 cursor-pointer hover:border-naranja transition text-sm">
+                <input type="checkbox" name="types[]" value="<?= (int)$t['id'] ?>" <?= $checked ? 'checked' : '' ?> class="accent-naranja" />
+                <span><?= e($t['name']) ?></span>
+              </label>
+            <?php endforeach; ?>
           </div>
+          <p class="text-xs text-gris-oscuro mt-1">Puedes elegir más de uno. El primero seleccionado será el principal.</p>
         </div>
 
         <div>

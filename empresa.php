@@ -70,13 +70,20 @@ include __DIR__ . '/includes/header.php';
       <?php if (!$offers): ?>
         <p class="text-sm text-gris-oscuro">Esta empresa no tiene ofertas activas en este momento.</p>
       <?php else: ?>
-        <ul class="space-y-3">
+        <ul class="space-y-4">
           <?php foreach ($offers as $o): ?>
-            <li class="border-l-2 border-naranja pl-4">
-              <h3 class="font-bold text-texto"><?= e($o['title']) ?></h3>
-              <p class="text-xs text-gris-oscuro mt-0.5"><?= e(ucfirst($o['modality'] ?? '')) ?><?= !empty($o['category']) ? ' · ' . e($o['category']) : '' ?> · publicada <?= e(format_date($o['published_at'] ?? $o['created_at'])) ?></p>
-              <?php if (!empty($o['description'])): ?><p class="text-sm text-gris-oscuro mt-2"><?= e(mb_strimwidth($o['description'], 0, 200, '…')) ?></p><?php endif; ?>
-              <a href="<?= e(u('/bolsa')) ?>#oferta-<?= (int)$o['id'] ?>" class="text-sm text-naranja font-semibold hover:underline mt-2 inline-block">Ver en bolsa →</a>
+            <li class="flex gap-4 border-l-2 border-naranja pl-4">
+              <?php if (!empty($o['flyer_image'])): ?>
+                <a href="<?= e(img_url($o['flyer_image'])) ?>" target="_blank" rel="noopener" class="shrink-0">
+                  <img src="<?= e(img_url($o['flyer_image'])) ?>" alt="<?= e($o['title']) ?>" class="w-24 h-24 object-cover rounded border border-gray-200" />
+                </a>
+              <?php endif; ?>
+              <div class="flex-1 min-w-0">
+                <h3 class="font-bold text-texto"><?= e($o['title']) ?></h3>
+                <p class="text-xs text-gris-oscuro mt-0.5"><?= e(ucfirst($o['modality'] ?? '')) ?><?= !empty($o['category']) ? ' · ' . e($o['category']) : '' ?> · publicada <?= e(format_date($o['published_at'] ?? $o['created_at'])) ?></p>
+                <?php if (!empty($o['description'])): ?><p class="text-sm text-gris-oscuro mt-2"><?= e(mb_strimwidth($o['description'], 0, 200, '…')) ?></p><?php endif; ?>
+                <a href="<?= e(u('/bolsa')) ?>#oferta-<?= (int)$o['id'] ?>" class="text-sm text-naranja font-semibold hover:underline mt-2 inline-block">Ver en bolsa →</a>
+              </div>
             </li>
           <?php endforeach; ?>
         </ul>

@@ -17,7 +17,6 @@ include __DIR__ . '/includes/header.php';
         </div>
         <div class="flex flex-wrap gap-2">
           <a href="<?= e(u('/bolsa-publicar-oferta')) ?>" class="bg-naranja text-white font-semibold px-4 py-2 rounded hover:bg-orange-600 transition text-sm">Publicar oferta</a>
-          <a href="<?= e(u('/bolsa-publicar-servicio')) ?>" class="border border-naranja text-naranja font-semibold px-4 py-2 rounded hover:bg-orange-50 transition text-sm">Publicar servicio</a>
         </div>
       </div>
     </div>
@@ -27,7 +26,7 @@ include __DIR__ . '/includes/header.php';
     <?php if ($flash_ok): ?><div class="bg-verde/10 border border-verde rounded p-4 mb-6 text-texto"><?= e($flash_ok) ?></div><?php endif; ?>
     <?php if ($flash_err): ?><div class="bg-red-50 border border-coral rounded p-4 mb-6 text-coral"><?= e($flash_err) ?></div><?php endif; ?>
 
-    <div class="flex gap-2 mb-8">
+    <div class="flex gap-2 mb-8" style="display:none;">
       <button id="btn-ofertas" class="bg-azul text-white px-5 py-2 rounded text-sm font-semibold">Ofertas de empleo</button>
       <button id="btn-servicios" class="bg-white border border-gray-300 text-gris-oscuro px-5 py-2 rounded text-sm font-semibold">Servicios profesionales</button>
     </div>
@@ -36,6 +35,11 @@ include __DIR__ . '/includes/header.php';
       <?php foreach ($offers as $o): ?>
         <article class="bg-white rounded-lg border border-gray-200 p-5 hover:shadow-md transition">
           <div class="flex flex-wrap gap-4 items-start">
+            <?php if (!empty($o['flyer_image'])): ?>
+              <a href="<?= e(img_url($o['flyer_image'])) ?>" target="_blank" rel="noopener" class="shrink-0">
+                <img src="<?= e(img_url($o['flyer_image'])) ?>" alt="<?= e($o['title']) ?>" class="w-32 h-32 object-cover rounded border border-gray-200" />
+              </a>
+            <?php endif; ?>
             <div class="flex-1 min-w-[250px]">
               <h3 class="font-bold text-texto text-lg"><?= e($o['title']) ?></h3>
               <p class="text-sm text-gris-oscuro mt-0.5"><?= e($o['company_name']) ?> · <?= e($o['country_name']) ?></p>
@@ -76,6 +80,11 @@ include __DIR__ . '/includes/header.php';
     <div id="servicios-section" class="space-y-4" style="display:none;">
       <?php foreach ($services as $s): ?>
         <article class="bg-white rounded-lg border border-gray-200 p-5 flex flex-wrap gap-4 items-start hover:shadow-md transition">
+          <?php if (!empty($s['flyer_image'])): ?>
+            <a href="<?= e(img_url($s['flyer_image'])) ?>" target="_blank" rel="noopener" class="shrink-0">
+              <img src="<?= e(img_url($s['flyer_image'])) ?>" alt="<?= e($s['title']) ?>" class="w-32 h-32 object-cover rounded border border-gray-200" />
+            </a>
+          <?php endif; ?>
           <div class="flex-1 min-w-[250px]">
             <h3 class="font-bold text-texto text-lg"><?= e($s['title']) ?></h3>
             <p class="text-sm text-gris-oscuro mt-0.5">Ofrecido por <?= e($s['professional_name']) ?> · <?= e($s['country_name']) ?></p>

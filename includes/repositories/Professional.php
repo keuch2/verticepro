@@ -51,4 +51,47 @@ class ProfessionalRepo {
     public static function services(int $id): array {
         return DB::all('SELECT * FROM professional_services WHERE professional_id = ? ORDER BY sort_order', [$id]);
     }
+
+    /** Devuelve todos los tipos del profesional (M:N). */
+    public static function types(int $id): array {
+        return DB::all(
+            'SELECT t.id, t.slug, t.name, l.is_primary
+             FROM professional_type_links l
+             JOIN professional_types t ON t.id = l.type_id
+             WHERE l.professional_id = ?
+             ORDER BY l.is_primary DESC, t.name',
+            [$id]
+        );
+    }
+
+    public static function typeIds(int $id): array {
+        return array_map('intval', array_column(
+            DB::all('SELECT type_id FROM professional_type_links WHERE professional_id = ?', [$id]),
+            'type_id'
+        ));
+    }
+
+    /** Reemplaza la lista de tipos del profesional. El primero pasa a ser primario. */
+    public static function setTypes(int $id, array $type_ids): void {
+        DB::run('DELETE FROM professional_type_links WHERE professional_id = ?', [$id]);
+        $first = true;
+        foreach (array_unique(array_map('intval', $type_ids)) as $tid) {
+            if ($tid <= 0) continue;
+            try {
+                DB::insert('professional_type_links', [
+                    'professional_id' => $id,
+                    'type_id'         => $tid,
+                    'is_primary'      => $first ? 1 : 0,
+                ]);
+                if ($first) {
+                    DB::update('professionals', ['type_id' => $tid], ['id' => $id]);
+                    $first = false;
+                }
+            } catch (\Throwable $e) {}
+        }
+        if ($first) {
+            // Sin tipos seleccionados, limpiar el cache
+            DB::update('professionals', ['type_id' => null], ['id' => $id]);
+        }
+    }
 }

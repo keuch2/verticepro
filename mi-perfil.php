@@ -44,7 +44,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     'title'    => trim($_POST['title'] ?? ''),
                     'bio'      => trim($_POST['bio'] ?? '') ?: null,
                     'city_id'  => !empty($_POST['city_id']) ? (int)$_POST['city_id'] : null,
-                    'type_id'  => !empty($_POST['type_id']) ? (int)$_POST['type_id'] : null,
                     'linkedin' => trim($_POST['linkedin'] ?? '') ?: null,
                     'website'  => trim($_POST['website'] ?? '') ?: null,
                     'phone'    => trim($_POST['phone'] ?? '') ?: null,
@@ -66,6 +65,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     if ($rel) $data['avatar_image'] = $rel;
                 }
                 DB::update('professionals', $data, ['id' => (int)$p['id']]);
+                // Tipos (M:N)
+                if (isset($_POST['types'])) {
+                    ProfessionalRepo::setTypes((int)$p['id'], (array)$_POST['types']);
+                }
                 // Sincronizar nombre con users
                 if (!empty($p['user_id'])) {
                     DB::update('users', ['name' => $data['name']], ['id' => (int)$p['user_id']]);
@@ -260,14 +263,23 @@ function tab_link(string $t, string $current, string $label, ?int $count = null)
         </select>
       </div>
       <div>
-        <label class="block text-sm font-semibold mb-1">Tipo de profesional</label>
-        <select name="type_id" class="w-full border border-gray-300 rounded px-3 py-2 bg-white">
-          <option value="">— Selecciona —</option>
-          <?php foreach ($types as $t): ?>
-            <option value="<?= (int)$t['id'] ?>" <?= (int)($p['type_id'] ?? 0) === (int)$t['id'] ? 'selected' : '' ?>><?= e($t['name']) ?></option>
-          <?php endforeach; ?>
-        </select>
+        <label class="block text-sm font-semibold mb-1">&nbsp;</label>
+        <p class="text-xs text-gris-oscuro pt-2">El tipo de profesional ahora admite múltiples valores (ver más abajo).</p>
       </div>
+    </div>
+
+    <?php $current_types = ProfessionalRepo::typeIds((int)$p['id']); ?>
+    <div>
+      <label class="block text-sm font-semibold mb-2">Tipo(s) de profesional</label>
+      <div class="grid grid-cols-2 md:grid-cols-3 gap-2">
+        <?php foreach ($types as $t): $checked = in_array((int)$t['id'], $current_types, true); ?>
+          <label class="flex items-center gap-2 border <?= $checked ? 'border-naranja bg-naranja/5' : 'border-gray-200' ?> rounded px-3 py-2 cursor-pointer hover:border-naranja transition text-sm">
+            <input type="checkbox" name="types[]" value="<?= (int)$t['id'] ?>" <?= $checked ? 'checked' : '' ?> class="accent-naranja" />
+            <span><?= e($t['name']) ?></span>
+          </label>
+        <?php endforeach; ?>
+      </div>
+      <p class="text-xs text-gris-oscuro mt-1">Puedes elegir más de uno. El primero seleccionado será el principal.</p>
     </div>
 
     <div>
