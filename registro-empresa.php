@@ -6,7 +6,7 @@ if (session_status() !== PHP_SESSION_ACTIVE) session_start();
 $errors = [];
 $old = [
     'name' => '', 'email' => '', 'description' => '',
-    'sectors' => [], 'country_id' => '', 'department_id' => '', 'city_id' => '',
+    'sectors' => [], 'services' => [], 'country_id' => '', 'department_id' => '', 'city_id' => '',
     'founded_year' => '', 'website' => '', 'phone' => '',
     'password' => '', 'password_confirm' => '',
     'visibility_email' => 1, 'visibility_website' => 1, 'visibility_phone' => 0,
@@ -21,6 +21,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $old['email']        = trim($_POST['email'] ?? '');
     $old['description']  = trim($_POST['description'] ?? '');
     $old['sectors']      = array_map('intval', (array)($_POST['sectors'] ?? []));
+    $old['services']     = array_map('intval', (array)($_POST['services'] ?? []));
     $old['country_id']   = $_POST['country_id'] ?? '';
     $old['department_id']= $_POST['department_id'] ?? '';
     $old['city_id']      = $_POST['city_id'] ?? '';
@@ -102,10 +103,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (!empty($old['sectors'])) {
             CompanyRepo::setSectors($cid, $old['sectors']);
         }
+        // Servicios (M:N)
+        if (!empty($old['services'])) {
+            CompanyRepo::setServices($cid, $old['services']);
+        }
 
         $submitted_ok = true;
         $old = [
-            'name'=>'','email'=>'','description'=>'','sectors'=>[],'country_id'=>'',
+            'name'=>'','email'=>'','description'=>'','sectors'=>[],'services'=>[],'country_id'=>'',
             'department_id'=>'','city_id'=>'','founded_year'=>'','website'=>'','phone'=>'',
             'password'=>'','password_confirm'=>'',
             'visibility_email'=>1,'visibility_website'=>1,'visibility_phone'=>0,
@@ -115,6 +120,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 $sectors     = SectionRepo::sectors();
+$companyServices = SectionRepo::companyServices();
 $countries   = SectionRepo::countries();
 $departments = SectionRepo::departments();
 $cities      = SectionRepo::cities();
@@ -203,6 +209,19 @@ include __DIR__ . '/includes/header.php';
             <?php endforeach; ?>
           </div>
           <p class="text-xs text-gris-oscuro mt-1">Puedes seleccionar más de uno. El primero será el principal.</p>
+        </div>
+
+        <div>
+          <label class="block text-sm font-semibold mb-2">Servicios que ofrecemos</label>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+            <?php foreach ($companyServices as $sv): $checked = in_array((int)$sv['id'], $old['services'], true); ?>
+              <label class="flex items-start gap-2 border <?= $checked ? 'border-naranja bg-naranja/5' : 'border-gray-200' ?> rounded px-3 py-2 cursor-pointer hover:border-naranja transition text-sm">
+                <input type="checkbox" name="services[]" value="<?= (int)$sv['id'] ?>" <?= $checked ? 'checked' : '' ?> class="accent-naranja mt-0.5" />
+                <span><?= e($sv['name']) ?></span>
+              </label>
+            <?php endforeach; ?>
+          </div>
+          <p class="text-xs text-gris-oscuro mt-1">Marca todos los servicios que tu empresa puede prestar.</p>
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-3 gap-5">

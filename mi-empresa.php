@@ -56,6 +56,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if (isset($_POST['sectors'])) {
                     CompanyRepo::setSectors((int)$c['id'], (array)$_POST['sectors']);
                 }
+                // Servicios ofrecidos (M:N)
+                if (isset($_POST['services'])) {
+                    CompanyRepo::setServices((int)$c['id'], (array)$_POST['services']);
+                }
                 if (!empty($c['user_id'])) DB::update('users', ['name' => $data['name']], ['id' => (int)$c['user_id']]);
                 $ok = 'Datos actualizados.';
                 $tab = 'datos';
@@ -119,6 +123,73 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $tab = 'ofertas';
                 break;
 
+            case 'update_application_status':
+                $iid    = (int)($_POST['interest_id'] ?? 0);
+                $status = $_POST['new_status'] ?? '';
+                if (!in_array($status, ['received','reviewed','shortlisted','rejected'], true)) {
+                    throw new RuntimeException('Estado inválido.');
+                }
+                // Validar que la postulación pertenece a una oferta de la empresa
+                $row = DB::one(
+                    'SELECT i.*, j.title AS offer_title
+                     FROM job_interests i JOIN job_offers j ON j.id = i.offer_id
+                     WHERE i.id = ? AND j.company_id = ? LIMIT 1',
+                    [$iid, (int)$c['id']]
+                );
+                if (!$row) throw new RuntimeException('Postulación no encontrada.');
+                DB::update('job_interests', [
+                    'status' => $status,
+                    'status_updated_at' => date('Y-m-d H:i:s'),
+                ], ['id' => $iid]);
+
+                // Notificar al postulante
+                $status_label = [
+                    'received'    => 'Recibida',
+                    'reviewed'    => 'Revisada',
+                    'shortlisted' => 'Preseleccionada',
+                    'rejected'    => 'No avanza',
+                ][$status];
+                $title = 'Cambio de estado en tu postulación';
+                $body  = 'La empresa ' . $c['name'] . ' actualizó el estado de tu postulación a "' . $row['offer_title'] . '": ahora figura como "' . $status_label . '".';
+                $link  = u('/mi-perfil?tab=intereses');
+                if (!empty($row['user_id'])) {
+                    Notify::create((int)$row['user_id'], 'application_status_changed', $title, $body, $link, $row['guest_email']);
+                } elseif (!empty($row['guest_email'])) {
+                    Notify::emailOnly($row['guest_email'], (string)$row['guest_name'], 1, $title, $body, $link);
+                }
+                $ok = 'Estado actualizado.';
+                $tab = 'interesados';
+                break;
+
+            case 'send_application_message':
+                $iid  = (int)($_POST['interest_id'] ?? 0);
+                $body = trim($_POST['message'] ?? '');
+                if ($body === '') throw new RuntimeException('Escribí un mensaje.');
+                $row = DB::one(
+                    'SELECT i.*, j.title AS offer_title
+                     FROM job_interests i JOIN job_offers j ON j.id = i.offer_id
+                     WHERE i.id = ? AND j.company_id = ? LIMIT 1',
+                    [$iid, (int)$c['id']]
+                );
+                if (!$row) throw new RuntimeException('Postulación no encontrada.');
+                DB::insert('application_messages', [
+                    'interest_id'    => $iid,
+                    'sender_role'    => 'company',
+                    'sender_user_id' => (int)$u['id'],
+                    'body'           => $body,
+                ]);
+                $title = 'Nuevo mensaje sobre tu postulación';
+                $msg   = 'La empresa ' . $c['name'] . ' te envió un mensaje sobre tu postulación a "' . $row['offer_title'] . '":' . "\n\n" . $body;
+                $link  = u('/mi-perfil?tab=intereses&open=' . $iid);
+                if (!empty($row['user_id'])) {
+                    Notify::create((int)$row['user_id'], 'application_message', $title, $msg, $link, $row['guest_email']);
+                } elseif (!empty($row['guest_email'])) {
+                    Notify::emailOnly($row['guest_email'], (string)$row['guest_name'], 1, $title, $msg, $link);
+                }
+                $ok = 'Mensaje enviado.';
+                $tab = 'interesados';
+                break;
+
             case 'save_password':
                 $cur = $_POST['current_password'] ?? '';
                 $pw1 = $_POST['new_password'] ?? '';
@@ -139,6 +210,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 $sectors   = SectionRepo::sectors();
+$companyServices = SectionRepo::companyServices();
 $countries = SectionRepo::countries();
 $cities    = SectionRepo::cities();
 $my_offers = DB::all('SELECT * FROM job_offers WHERE company_id = ? ORDER BY created_at DESC', [(int)$c['id']]);
@@ -158,6 +230,16 @@ function tab_link_emp(string $t, string $current, string $label, ?int $count = n
     return '<a href="' . $url . '" class="px-1 py-3 border-b-2 ' . $cls . ' font-semibold text-sm transition">' . e($label) . $badge . '</a>';
 }
 ?>
+<?php $__has_prof = DB::one('SELECT id FROM professionals WHERE user_id = ? LIMIT 1', [(int)$u['id']]); ?>
+<?php if (!$__has_prof): ?>
+  <div class="max-w-5xl mx-auto px-6 mt-4">
+    <div class="bg-azul/10 border border-azul rounded-lg px-4 py-3 flex flex-wrap items-center justify-between gap-3">
+      <p class="text-sm text-texto">¿Querés sumar tu perfil profesional? Podés crearlo vinculado a esta misma cuenta y aparecer en la Red de Profesionales.</p>
+      <a href="<?= e(u('/crear-perfil')) ?>" class="bg-azul text-white text-sm font-semibold px-4 py-2 rounded hover:bg-blue-700 transition">+ Crear perfil profesional</a>
+    </div>
+  </div>
+<?php endif; ?>
+
 <section class="bg-gris-claro py-8 px-6">
   <div class="max-w-5xl mx-auto flex flex-wrap items-end justify-between gap-3">
     <div>
@@ -218,6 +300,19 @@ function tab_link_emp(string $t, string $current, string $label, ?int $count = n
           <label class="flex items-center gap-2 border <?= $checked ? 'border-naranja bg-naranja/5' : 'border-gray-200' ?> rounded px-3 py-2 cursor-pointer hover:border-naranja transition text-sm">
             <input type="checkbox" name="sectors[]" value="<?= (int)$s['id'] ?>" <?= $checked ? 'checked' : '' ?> class="accent-naranja" />
             <span><?= e($s['name']) ?></span>
+          </label>
+        <?php endforeach; ?>
+      </div>
+    </div>
+
+    <div>
+      <?php $current_services = CompanyRepo::serviceIds((int)$c['id']); ?>
+      <label class="block text-sm font-semibold mb-2">Servicios que ofrecemos</label>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+        <?php foreach ($companyServices as $sv): $checked = in_array((int)$sv['id'], $current_services, true); ?>
+          <label class="flex items-start gap-2 border <?= $checked ? 'border-naranja bg-naranja/5' : 'border-gray-200' ?> rounded px-3 py-2 cursor-pointer hover:border-naranja transition text-sm">
+            <input type="checkbox" name="services[]" value="<?= (int)$sv['id'] ?>" <?= $checked ? 'checked' : '' ?> class="accent-naranja mt-0.5" />
+            <span><?= e($sv['name']) ?></span>
           </label>
         <?php endforeach; ?>
       </div>
@@ -386,8 +481,23 @@ function tab_link_emp(string $t, string $current, string $label, ?int $count = n
   <?php endif; ?>
 
 <?php elseif ($tab === 'interesados'): ?>
-  <?php $filter_offer = isset($_GET['offer']) ? (int)$_GET['offer'] : 0;
-        $filtered = $filter_offer ? array_filter($my_interests, fn($i) => (int)$i['offer_id'] === $filter_offer) : $my_interests; ?>
+  <?php
+    $filter_offer = isset($_GET['offer']) ? (int)$_GET['offer'] : 0;
+    $filtered = $filter_offer ? array_filter($my_interests, fn($i) => (int)$i['offer_id'] === $filter_offer) : $my_interests;
+    $open_interest = isset($_GET['open']) ? (int)$_GET['open'] : 0;
+    $status_styles = [
+      'received'    => 'bg-gray-100 text-gris-oscuro',
+      'reviewed'    => 'bg-azul/10 text-azul',
+      'shortlisted' => 'bg-verde/10 text-verde',
+      'rejected'    => 'bg-red-50 text-coral',
+    ];
+    $status_labels = [
+      'received'    => 'Recibida',
+      'reviewed'    => 'Revisada',
+      'shortlisted' => 'Preseleccionada',
+      'rejected'    => 'No avanza',
+    ];
+  ?>
   <?php if ($filter_offer): ?>
     <p class="mb-4 text-sm">Filtrando interesados en oferta #<?= $filter_offer ?>. <a href="<?= e(u('/mi-empresa?tab=interesados')) ?>" class="text-azul hover:underline">Ver todos</a></p>
   <?php endif; ?>
@@ -395,18 +505,88 @@ function tab_link_emp(string $t, string $current, string $label, ?int $count = n
     <p class="text-gris-oscuro">No tienes interesados todavía.</p>
   <?php else: ?>
     <ul class="space-y-3">
-      <?php foreach ($filtered as $i): ?>
-        <li class="bg-white border border-gray-200 rounded-lg p-5 flex flex-wrap gap-3 items-start">
-          <div class="flex-1 min-w-[200px]">
-            <p class="text-xs text-gris-oscuro uppercase font-bold">Oferta: <?= e($i['offer_title']) ?></p>
-            <p class="font-bold mt-1"><?= e($i['guest_name']) ?></p>
-            <p class="text-sm text-azul"><a href="mailto:<?= e($i['guest_email']) ?>"><?= e($i['guest_email']) ?></a></p>
-            <?php if ($i['professional_id']): $pr = ProfessionalRepo::find((int)$i['professional_id']); ?>
-              <?php if ($pr): ?><p class="text-xs text-gris-oscuro mt-1">Perfil en la red: <a href="<?= e(profile_url($pr)) ?>" class="text-azul hover:underline" target="_blank"><?= e($pr['name']) ?> →</a></p><?php endif; ?>
+      <?php foreach ($filtered as $i):
+        $pr = $i['professional_id'] ? ProfessionalRepo::find((int)$i['professional_id']) : null;
+        $ptypes = $pr ? ProfessionalRepo::types((int)$pr['id']) : [];
+        $st = $i['status'] ?? 'received';
+        $is_open = $open_interest === (int)$i['id'];
+        $messages = DB::all('SELECT * FROM application_messages WHERE interest_id = ? ORDER BY created_at ASC', [(int)$i['id']]);
+      ?>
+        <li class="bg-white border border-gray-200 rounded-lg p-5">
+          <div class="flex flex-wrap gap-4 items-start">
+            <?php if ($pr && !empty($pr['avatar_image'])): ?>
+              <img src="<?= e(img_url($pr['avatar_image'])) ?>" alt="" class="w-16 h-16 rounded-full object-cover shrink-0" />
+            <?php else: ?>
+              <div class="w-16 h-16 rounded-full bg-naranja flex items-center justify-center text-white font-bold text-lg shrink-0">
+                <?= e(mb_substr($i['guest_name'] ?? '?', 0, 1)) ?>
+              </div>
             <?php endif; ?>
-            <?php if ($i['message']): ?><p class="text-sm text-gris-oscuro mt-2 italic">"<?= e($i['message']) ?>"</p><?php endif; ?>
+            <div class="flex-1 min-w-[200px]">
+              <p class="text-xs text-gris-oscuro uppercase font-bold">Oferta: <?= e($i['offer_title']) ?></p>
+              <p class="font-bold mt-1"><?= e($i['guest_name']) ?></p>
+              <p class="text-sm text-azul mt-0.5"><a href="mailto:<?= e($i['guest_email']) ?>"><?= e($i['guest_email']) ?></a></p>
+              <?php if ($pr): ?>
+                <p class="text-xs text-gris-oscuro mt-1"><?= e($pr['title'] ?? '') ?></p>
+                <?php if ($ptypes): ?>
+                  <p class="text-xs text-gris-oscuro mt-0.5"><?= e(implode(' · ', array_column($ptypes, 'name'))) ?></p>
+                <?php endif; ?>
+                <?php if (!empty($pr['bio'])): ?>
+                  <p class="text-sm text-gris-oscuro mt-2"><?= e(mb_strimwidth($pr['bio'], 0, 160, '…')) ?></p>
+                <?php endif; ?>
+                <a href="<?= e(profile_url($pr)) ?>" target="_blank" class="text-xs text-azul hover:underline mt-1 inline-block">Ver perfil completo →</a>
+              <?php endif; ?>
+              <?php if ($i['message']): ?>
+                <p class="text-sm text-gris-oscuro mt-2 italic">"<?= e($i['message']) ?>"</p>
+              <?php endif; ?>
+            </div>
+            <div class="text-right shrink-0 space-y-2">
+              <span class="inline-block text-xs px-2 py-1 rounded-full font-semibold <?= e($status_styles[$st]) ?>"><?= e($status_labels[$st]) ?></span>
+              <p class="text-xs text-gris-oscuro opacity-70"><?= e(format_date($i['created_at'])) ?></p>
+              <form method="post" class="flex items-center gap-2">
+                <input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>" />
+                <input type="hidden" name="action" value="update_application_status" />
+                <input type="hidden" name="interest_id" value="<?= (int)$i['id'] ?>" />
+                <select name="new_status" class="text-xs border border-gray-300 rounded px-2 py-1">
+                  <?php foreach ($status_labels as $k => $lbl): ?>
+                    <option value="<?= e($k) ?>" <?= $st===$k?'selected':'' ?>><?= e($lbl) ?></option>
+                  <?php endforeach; ?>
+                </select>
+                <button class="text-xs bg-azul text-white px-2 py-1 rounded hover:bg-blue-700" type="submit">Aplicar</button>
+              </form>
+              <a href="<?= e(u('/mi-empresa?tab=interesados' . ($filter_offer ? '&offer=' . $filter_offer : '') . ($is_open ? '' : '&open=' . (int)$i['id']))) ?>#int-<?= (int)$i['id'] ?>" id="int-<?= (int)$i['id'] ?>" class="text-xs text-azul hover:underline">
+                💬 <?= $is_open ? 'Ocultar conversación' : 'Ver conversación' ?> <?= count($messages) ? '(' . count($messages) . ')' : '' ?>
+              </a>
+            </div>
           </div>
-          <p class="text-xs text-gris-oscuro opacity-70 shrink-0"><?= e(format_date($i['created_at'])) ?></p>
+
+          <?php if ($is_open): ?>
+            <div class="mt-5 pt-5 border-t border-gray-200">
+              <?php if ($messages): ?>
+                <ul class="space-y-3 mb-4">
+                  <?php foreach ($messages as $m): $is_company = $m['sender_role'] === 'company'; ?>
+                    <li class="flex <?= $is_company ? 'justify-end' : 'justify-start' ?>">
+                      <div class="max-w-[80%] <?= $is_company ? 'bg-azul/10 text-texto' : 'bg-gray-100 text-texto' ?> rounded-lg px-3 py-2">
+                        <p class="text-xs font-semibold mb-1 <?= $is_company ? 'text-azul' : 'text-gris-oscuro' ?>"><?= $is_company ? 'Tú (empresa)' : e($i['guest_name']) ?></p>
+                        <p class="text-sm whitespace-pre-line"><?= e($m['body']) ?></p>
+                        <p class="text-[10px] opacity-60 mt-1"><?= e(format_date($m['created_at'])) ?></p>
+                      </div>
+                    </li>
+                  <?php endforeach; ?>
+                </ul>
+              <?php else: ?>
+                <p class="text-sm text-gris-oscuro mb-3">No hay mensajes todavía. Inicia la conversación.</p>
+              <?php endif; ?>
+              <form method="post" class="flex flex-col gap-2">
+                <input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>" />
+                <input type="hidden" name="action" value="send_application_message" />
+                <input type="hidden" name="interest_id" value="<?= (int)$i['id'] ?>" />
+                <textarea name="message" rows="2" required placeholder="Escribí un mensaje al postulante…" class="w-full border border-gray-300 rounded px-3 py-2 text-sm"></textarea>
+                <div class="text-right">
+                  <button class="bg-azul text-white text-sm font-semibold px-4 py-2 rounded hover:bg-blue-700" type="submit">Enviar mensaje</button>
+                </div>
+              </form>
+            </div>
+          <?php endif; ?>
         </li>
       <?php endforeach; ?>
     </ul>

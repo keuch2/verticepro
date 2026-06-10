@@ -5,6 +5,7 @@ $page_title = 'Taxonomías — Admin';
 $tables = [
     'disciplines'         => ['label' => 'Disciplinas', 'cols' => ['slug','name']],
     'sectors'             => ['label' => 'Sectores', 'cols' => ['slug','name']],
+    'company_services'    => ['label' => 'Servicios de empresa', 'cols' => ['slug','name']],
     'countries'           => ['label' => 'Países', 'cols' => ['slug','name']],
     'cities'              => ['label' => 'Ciudades', 'cols' => ['slug','name','country_id']],
     'professional_types'  => ['label' => 'Tipos de profesional', 'cols' => ['slug','name']],

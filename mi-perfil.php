@@ -163,6 +163,38 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $tab = 'intereses';
                 break;
 
+            case 'send_application_message':
+                $iid  = (int)($_POST['interest_id'] ?? 0);
+                $body = trim($_POST['message'] ?? '');
+                if ($body === '') throw new RuntimeException('Escribí un mensaje.');
+                // Validar que el interes le pertenece (user_id)
+                $row = DB::one(
+                    'SELECT i.*, j.title AS offer_title, c.user_id AS company_user_id, c.name AS company_name, c.email AS company_email, c.notifications_opt_in AS company_opt_in
+                     FROM job_interests i
+                     JOIN job_offers j ON j.id = i.offer_id
+                     JOIN companies c ON c.id = j.company_id
+                     WHERE i.id = ? AND i.user_id = ? LIMIT 1',
+                    [$iid, (int)$u['id']]
+                );
+                if (!$row) throw new RuntimeException('Postulación no encontrada.');
+                DB::insert('application_messages', [
+                    'interest_id'    => $iid,
+                    'sender_role'    => 'professional',
+                    'sender_user_id' => (int)$u['id'],
+                    'body'           => $body,
+                ]);
+                $title = 'Nuevo mensaje de un postulante';
+                $msg   = ($u['name'] ?? 'Un profesional') . ' te respondió sobre su postulación a "' . $row['offer_title'] . '":' . "\n\n" . $body;
+                $link  = u('/mi-empresa?tab=interesados&open=' . $iid);
+                if (!empty($row['company_user_id'])) {
+                    Notify::create((int)$row['company_user_id'], 'application_message', $title, $msg, $link, $row['company_email']);
+                } elseif (!empty($row['company_email'])) {
+                    Notify::emailOnly($row['company_email'], (string)$row['company_name'], (int)($row['company_opt_in'] ?? 1), $title, $msg, $link);
+                }
+                $ok = 'Mensaje enviado.';
+                $tab = 'intereses';
+                break;
+
             case 'save_password':
                 $cur = $_POST['current_password'] ?? '';
                 $pw1 = $_POST['new_password'] ?? '';
@@ -214,6 +246,16 @@ function tab_link(string $t, string $current, string $label, ?int $count = null)
     return '<a href="' . $url . '" class="px-1 py-3 border-b-2 ' . $cls . ' font-semibold text-sm transition">' . e($label) . $badge . '</a>';
 }
 ?>
+<?php $__has_company = DB::one('SELECT id FROM companies WHERE user_id = ? LIMIT 1', [(int)$u['id']]); ?>
+<?php if (!$__has_company): ?>
+  <div class="max-w-5xl mx-auto px-6 mt-4">
+    <div class="bg-azul/10 border border-azul rounded-lg px-4 py-3 flex flex-wrap items-center justify-between gap-3">
+      <p class="text-sm text-texto">¿Tu organización también quiere estar en el directorio? Crea un perfil de empresa vinculado a tu cuenta.</p>
+      <a href="<?= e(u('/crear-empresa')) ?>" class="bg-azul text-white text-sm font-semibold px-4 py-2 rounded hover:bg-blue-700 transition">+ Crear perfil de empresa</a>
+    </div>
+  </div>
+<?php endif; ?>
+
 <section class="bg-gris-claro py-8 px-6">
   <div class="max-w-5xl mx-auto flex flex-wrap items-end justify-between gap-3">
     <div>
@@ -445,37 +487,93 @@ function tab_link(string $t, string $current, string $label, ?int $count = null)
   </form>
 
 <?php elseif ($tab === 'intereses'): ?>
+  <?php
+    $open_interest = isset($_GET['open']) ? (int)$_GET['open'] : 0;
+    $status_styles = [
+      'received'    => 'bg-gray-100 text-gris-oscuro',
+      'reviewed'    => 'bg-azul/10 text-azul',
+      'shortlisted' => 'bg-verde/10 text-verde',
+      'rejected'    => 'bg-red-50 text-coral',
+    ];
+    $status_labels = [
+      'received'    => 'Recibida',
+      'reviewed'    => 'Revisada',
+      'shortlisted' => 'Preseleccionada',
+      'rejected'    => 'No avanza',
+    ];
+  ?>
   <?php if (!$intereses): ?>
     <div class="bg-gris-claro border border-gray-200 rounded p-8 text-center text-gris-oscuro">
       Aún no marcaste ninguna oferta como de tu interés.
       <div class="mt-3"><a href="<?= e(u('/bolsa')) ?>" class="text-azul hover:underline font-semibold">Explorar la Bolsa de Trabajo →</a></div>
     </div>
   <?php else: ?>
-    <p class="text-sm text-gris-oscuro mb-4">Cuando marcaste interés en una oferta, la empresa que la publicó recibió tus datos de contacto. Aquí están tus marcaciones.</p>
+    <p class="text-sm text-gris-oscuro mb-4">Cuando marcaste interés en una oferta, la empresa que la publicó recibió tus datos de contacto. Aquí podés ver el estado actual de cada postulación y conversar con la empresa.</p>
     <ul class="space-y-3">
-      <?php foreach ($intereses as $i): ?>
-        <li class="bg-white border border-gray-200 rounded-lg p-5 flex flex-wrap gap-4 items-start">
-          <?php if (!empty($i['flyer_image'])): ?>
-            <img src="<?= e(img_url($i['flyer_image'])) ?>" alt="" class="w-20 h-20 object-cover rounded border border-gray-200 shrink-0" />
-          <?php endif; ?>
-          <div class="flex-1 min-w-[200px]">
-            <h3 class="font-bold text-texto"><?= e($i['title']) ?></h3>
-            <p class="text-xs text-gris-oscuro mt-0.5">
-              <a href="<?= e(u('/empresa/' . $i['company_slug'])) ?>" class="text-azul hover:underline"><?= e($i['company_name']) ?></a>
-              · <?= e($i['modality'] ?? '') ?>
-              <?= !empty($i['category']) ? ' · ' . e($i['category']) : '' ?>
-              · marcado <?= e(format_date($i['created_at'])) ?>
-            </p>
-            <?php if ($i['offer_status'] !== 'published'): ?>
-              <p class="text-xs text-coral mt-1">⚠ Esta oferta ya no está activa.</p>
+      <?php foreach ($intereses as $i):
+        $st = $i['status'] ?? 'received';
+        $is_open = $open_interest === (int)$i['id'];
+        $messages = DB::all('SELECT * FROM application_messages WHERE interest_id = ? ORDER BY created_at ASC', [(int)$i['id']]);
+      ?>
+        <li class="bg-white border border-gray-200 rounded-lg p-5">
+          <div class="flex flex-wrap gap-4 items-start">
+            <?php if (!empty($i['flyer_image'])): ?>
+              <img src="<?= e(img_url($i['flyer_image'])) ?>" alt="" class="w-20 h-20 object-cover rounded border border-gray-200 shrink-0" />
             <?php endif; ?>
+            <div class="flex-1 min-w-[200px]">
+              <h3 class="font-bold text-texto"><?= e($i['title']) ?></h3>
+              <p class="text-xs text-gris-oscuro mt-0.5">
+                <a href="<?= e(u('/empresa/' . $i['company_slug'])) ?>" class="text-azul hover:underline"><?= e($i['company_name']) ?></a>
+                · <?= e($i['modality'] ?? '') ?>
+                <?= !empty($i['category']) ? ' · ' . e($i['category']) : '' ?>
+                · marcado <?= e(format_date($i['created_at'])) ?>
+              </p>
+              <?php if ($i['offer_status'] !== 'published'): ?>
+                <p class="text-xs text-coral mt-1">⚠ Esta oferta ya no está activa.</p>
+              <?php endif; ?>
+              <a href="<?= e(u('/mi-perfil?tab=intereses' . ($is_open ? '' : '&open=' . (int)$i['id']))) ?>#int-<?= (int)$i['id'] ?>" id="int-<?= (int)$i['id'] ?>" class="text-xs text-azul hover:underline mt-2 inline-block">
+                💬 <?= $is_open ? 'Ocultar conversación' : 'Ver conversación' ?> <?= count($messages) ? '(' . count($messages) . ')' : '' ?>
+              </a>
+            </div>
+            <div class="shrink-0 flex flex-col items-end gap-2">
+              <span class="text-xs px-2 py-1 rounded-full font-semibold <?= e($status_styles[$st]) ?>"><?= e($status_labels[$st]) ?></span>
+              <form method="post">
+                <input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>" />
+                <input type="hidden" name="action" value="remove_interest" />
+                <input type="hidden" name="offer_id" value="<?= (int)$i['offer_id'] ?>" />
+                <button class="text-xs border border-coral text-coral px-3 py-1 rounded hover:bg-red-50" type="submit" onclick="return confirm('¿Quitar de tus intereses?')">Quitar</button>
+              </form>
+            </div>
           </div>
-          <form method="post" class="shrink-0">
-            <input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>" />
-            <input type="hidden" name="action" value="remove_interest" />
-            <input type="hidden" name="offer_id" value="<?= (int)$i['offer_id'] ?>" />
-            <button class="text-xs border border-coral text-coral px-3 py-1 rounded hover:bg-red-50" type="submit" onclick="return confirm('¿Quitar de tus intereses?')">Quitar</button>
-          </form>
+
+          <?php if ($is_open): ?>
+            <div class="mt-5 pt-5 border-t border-gray-200">
+              <?php if ($messages): ?>
+                <ul class="space-y-3 mb-4">
+                  <?php foreach ($messages as $m): $is_me = $m['sender_role'] === 'professional'; ?>
+                    <li class="flex <?= $is_me ? 'justify-end' : 'justify-start' ?>">
+                      <div class="max-w-[80%] <?= $is_me ? 'bg-naranja/10 text-texto' : 'bg-gray-100 text-texto' ?> rounded-lg px-3 py-2">
+                        <p class="text-xs font-semibold mb-1 <?= $is_me ? 'text-naranja' : 'text-gris-oscuro' ?>"><?= $is_me ? 'Tú' : e($i['company_name']) ?></p>
+                        <p class="text-sm whitespace-pre-line"><?= e($m['body']) ?></p>
+                        <p class="text-[10px] opacity-60 mt-1"><?= e(format_date($m['created_at'])) ?></p>
+                      </div>
+                    </li>
+                  <?php endforeach; ?>
+                </ul>
+              <?php else: ?>
+                <p class="text-sm text-gris-oscuro mb-3">Sin mensajes todavía. Si la empresa te escribe, lo vas a ver aquí.</p>
+              <?php endif; ?>
+              <form method="post" class="flex flex-col gap-2">
+                <input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>" />
+                <input type="hidden" name="action" value="send_application_message" />
+                <input type="hidden" name="interest_id" value="<?= (int)$i['id'] ?>" />
+                <textarea name="message" rows="2" required placeholder="Escribí un mensaje a la empresa…" class="w-full border border-gray-300 rounded px-3 py-2 text-sm"></textarea>
+                <div class="text-right">
+                  <button class="bg-naranja text-white text-sm font-semibold px-4 py-2 rounded hover:bg-orange-600" type="submit">Enviar mensaje</button>
+                </div>
+              </form>
+            </div>
+          <?php endif; ?>
         </li>
       <?php endforeach; ?>
     </ul>

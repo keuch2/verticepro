@@ -62,6 +62,17 @@ include __DIR__ . '/includes/header.php';
       </section>
     <?php endif; ?>
 
+    <?php $emp_services = CompanyRepo::services($cid); if ($emp_services): ?>
+      <section class="bg-white rounded-lg border border-gray-200 p-6">
+        <h2 class="font-bold text-lg mb-3">Servicios ofrecidos</h2>
+        <div class="flex flex-wrap gap-2">
+          <?php foreach ($emp_services as $sv): ?>
+            <span class="text-sm bg-naranja/10 text-naranja px-3 py-1 rounded-full font-semibold"><?= e($sv['name']) ?></span>
+          <?php endforeach; ?>
+        </div>
+      </section>
+    <?php endif; ?>
+
     <section class="bg-white rounded-lg border border-gray-200 p-6">
       <div class="flex items-center justify-between mb-4">
         <h2 class="font-bold text-lg">Ofertas de empleo activas</h2>

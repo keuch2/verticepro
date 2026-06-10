@@ -11,6 +11,7 @@ class SectionRepo {
 
     public static function disciplines(): array { return DB::all('SELECT * FROM disciplines ORDER BY id'); }
     public static function sectors(): array      { return DB::all('SELECT * FROM sectors ORDER BY id'); }
+    public static function companyServices(): array { return DB::all('SELECT * FROM company_services ORDER BY name'); }
     public static function cities(): array       {
         return DB::all('SELECT c.*, co.name country_name, co.slug country_slug, co.sort_order country_sort,
                                d.slug department_slug, d.name department_name

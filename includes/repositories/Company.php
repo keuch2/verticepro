@@ -57,4 +57,30 @@ class CompanyRepo {
         }
         if ($first) DB::update('companies', ['sector_id' => null], ['id' => $id]);
     }
+
+    public static function services(int $id): array {
+        return DB::all(
+            'SELECT s.id, s.slug, s.name
+             FROM company_service_links l JOIN company_services s ON s.id = l.service_id
+             WHERE l.company_id = ? ORDER BY s.name',
+            [$id]
+        );
+    }
+
+    public static function serviceIds(int $id): array {
+        return array_map('intval', array_column(
+            DB::all('SELECT service_id FROM company_service_links WHERE company_id = ?', [$id]),
+            'service_id'
+        ));
+    }
+
+    public static function setServices(int $id, array $service_ids): void {
+        DB::run('DELETE FROM company_service_links WHERE company_id = ?', [$id]);
+        foreach (array_unique(array_map('intval', $service_ids)) as $sid) {
+            if ($sid <= 0) continue;
+            try {
+                DB::insert('company_service_links', ['company_id' => $id, 'service_id' => $sid]);
+            } catch (\Throwable $e) {}
+        }
+    }
 }

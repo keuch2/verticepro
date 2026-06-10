@@ -166,8 +166,10 @@ document.addEventListener('DOMContentLoaded', () => {
           const haystack = norm(card.getAttribute('data-search') || '');
           if (!haystack.includes(searchTerm)) { visible = false; break; }
         } else {
+          // El card puede tener un único valor o varios separados por espacio (multi-valor).
           const cardVal = card.getAttribute('data-' + axis) || '';
-          if (cardVal !== filterVal) { visible = false; break; }
+          const tokens = cardVal.split(/\s+/).filter(Boolean);
+          if (!tokens.includes(filterVal)) { visible = false; break; }
         }
       }
       if (visible) {

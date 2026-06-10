@@ -2,6 +2,7 @@
 require_once __DIR__ . '/includes/bootstrap.php';
 $companies = CompanyRepo::all();
 $sectors = SectionRepo::sectors();
+$companyServices = SectionRepo::companyServices();
 $countries = SectionRepo::countries();
 $departments = SectionRepo::departments();
 $cities = SectionRepo::cities();
@@ -27,6 +28,10 @@ include __DIR__ . '/includes/header.php';
         <option value="">Todos los sectores</option>
         <?php foreach ($sectors as $s): ?><option value="<?= e($s['slug']) ?>"><?= e($s['name']) ?></option><?php endforeach; ?>
       </select>
+      <select data-filter-axis="servicio" class="border border-gray-300 rounded px-3 py-1.5 text-sm">
+        <option value="">Todos los servicios</option>
+        <?php foreach ($companyServices as $sv): ?><option value="<?= e($sv['slug']) ?>"><?= e($sv['name']) ?></option><?php endforeach; ?>
+      </select>
       <select data-filter-axis="departamento" class="border border-gray-300 rounded px-3 py-1.5 text-sm">
         <option value="">Todos los departamentos</option>
         <?php foreach ($departments as $d): ?><option value="<?= e($d['slug']) ?>"><?= e($d['name']) ?></option><?php endforeach; ?>
@@ -49,14 +54,19 @@ include __DIR__ . '/includes/header.php';
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
       <?php foreach ($companies as $c):
         $offers = CompanyRepo::offersCount((int)$c['id']);
+        $company_services = CompanyRepo::services((int)$c['id']);
+        $svc_slugs = implode(' ', array_column($company_services, 'slug'));
+        $svc_names = implode(' ', array_column($company_services, 'name'));
         $search_blob = strtolower(trim(
           ($c['name'] ?? '') . ' ' . ($c['description'] ?? '') . ' ' .
-          ($c['sector_name'] ?? '') . ' ' . ($c['city_name'] ?? '') . ' ' . ($c['department_name'] ?? '')
+          ($c['sector_name'] ?? '') . ' ' . ($c['city_name'] ?? '') . ' ' . ($c['department_name'] ?? '') . ' ' .
+          $svc_names
         ));
         $loc = trim(($c['city_name'] ?? '') . ($c['city_name'] && $c['country_name'] ? ', ' : '') . ($c['country_name'] ?? ''));
       ?>
         <article data-card
                  data-sector="<?= e($c['sector_slug']) ?>"
+                 data-servicio="<?= e($svc_slugs) ?>"
                  data-pais="<?= e($c['country_slug']) ?>"
                  data-departamento="<?= e($c['department_slug'] ?? '') ?>"
                  data-ciudad="<?= e($c['city_slug'] ?? '') ?>"

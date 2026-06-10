@@ -19,16 +19,24 @@ function require_public_user(): array {
 
 function require_professional(): array {
     $u = require_public_user();
-    if (!in_array($u['role'], ['professional', 'admin'], true)) {
-        redirect('/mi-empresa');
+    if (in_array($u['role'], ['admin', 'author'], true)) return $u;
+    // Acepta al user si tiene un perfil profesional vinculado (independiente de users.role).
+    $prof = DB::one('SELECT id FROM professionals WHERE user_id = ? LIMIT 1', [(int)$u['id']]);
+    if (!$prof) {
+        // No tiene perfil profesional: redirige a la empresa o a inicio.
+        $hasComp = DB::one('SELECT id FROM companies WHERE user_id = ? LIMIT 1', [(int)$u['id']]);
+        redirect($hasComp ? '/mi-empresa' : '/');
     }
     return $u;
 }
 
 function require_company(): array {
     $u = require_public_user();
-    if (!in_array($u['role'], ['company', 'admin'], true)) {
-        redirect('/mi-perfil');
+    if (in_array($u['role'], ['admin', 'author'], true)) return $u;
+    $comp = DB::one('SELECT id FROM companies WHERE user_id = ? LIMIT 1', [(int)$u['id']]);
+    if (!$comp) {
+        $hasProf = DB::one('SELECT id FROM professionals WHERE user_id = ? LIMIT 1', [(int)$u['id']]);
+        redirect($hasProf ? '/mi-perfil' : '/');
     }
     return $u;
 }

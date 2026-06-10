@@ -11,10 +11,18 @@ $page_description = $page_description ?? setting('seo.meta_description', 'Plataf
 $current_user = public_logged_in();
 $unread_notifs = $current_user ? Notify::unreadCount((int)$current_user['id']) : 0;
 $my_area_url = '/login';
+$has_prof = $has_comp = false;
 if ($current_user) {
-    if ($current_user['role'] === 'professional')                $my_area_url = '/mi-perfil';
-    elseif ($current_user['role'] === 'company')                 $my_area_url = '/mi-empresa';
-    elseif (in_array($current_user['role'], ['admin','author'], true)) $my_area_url = '/admin/';
+    if (in_array($current_user['role'], ['admin','author'], true)) {
+        $my_area_url = '/admin/';
+    } else {
+        $has_prof = (bool)DB::one('SELECT id FROM professionals WHERE user_id = ? LIMIT 1', [(int)$current_user['id']]);
+        $has_comp = (bool)DB::one('SELECT id FROM companies WHERE user_id = ? LIMIT 1', [(int)$current_user['id']]);
+        if ($has_prof)      $my_area_url = '/mi-perfil';
+        elseif ($has_comp)  $my_area_url = '/mi-empresa';
+        elseif ($current_user['role'] === 'professional') $my_area_url = '/mi-perfil';
+        elseif ($current_user['role'] === 'company')      $my_area_url = '/mi-empresa';
+    }
 }
 
 // Helper for nav link active state (desktop)
@@ -101,9 +109,26 @@ $c = $page_active;
               <?= e(mb_strimwidth($current_user['name'], 0, 18, '…')) ?>
               <svg class="w-3.5 h-3.5 opacity-80" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
             </button>
-            <div class="absolute right-0 top-full mt-1 w-52 bg-white border border-gray-200 rounded-lg shadow-lg py-1 hidden group-hover:block z-50">
-              <a href="<?= e(u($my_area_url)) ?>" class="block px-4 py-2.5 text-sm text-gris-oscuro hover:bg-gris-claro hover:text-naranja transition">Mi cuenta</a>
-              <a href="<?= e(u('/notificaciones')) ?>" class="block px-4 py-2.5 text-sm text-gris-oscuro hover:bg-gris-claro hover:text-naranja transition">Notificaciones<?php if ($unread_notifs > 0): ?> <span class="text-coral font-bold">(<?= (int)$unread_notifs ?>)</span><?php endif; ?></a>
+            <div class="absolute right-0 top-full mt-1 w-56 bg-white border border-gray-200 rounded-lg shadow-lg py-1 hidden group-hover:block z-50">
+              <?php if ($has_prof): ?>
+                <a href="<?= e(u('/mi-perfil')) ?>" class="block px-4 py-2.5 text-sm text-gris-oscuro hover:bg-gris-claro hover:text-naranja transition">Mi perfil profesional</a>
+              <?php endif; ?>
+              <?php if ($has_comp): ?>
+                <a href="<?= e(u('/mi-empresa')) ?>" class="block px-4 py-2.5 text-sm text-gris-oscuro hover:bg-gris-claro hover:text-naranja transition">Mi empresa</a>
+              <?php endif; ?>
+              <?php if (!$has_prof && !$has_comp && !in_array($current_user['role'], ['admin','author'], true)): ?>
+                <a href="<?= e(u($my_area_url)) ?>" class="block px-4 py-2.5 text-sm text-gris-oscuro hover:bg-gris-claro hover:text-naranja transition">Mi cuenta</a>
+              <?php endif; ?>
+              <?php if (in_array($current_user['role'], ['admin','author'], true)): ?>
+                <a href="<?= e(u('/admin/')) ?>" class="block px-4 py-2.5 text-sm text-gris-oscuro hover:bg-gris-claro hover:text-naranja transition">Panel admin</a>
+              <?php endif; ?>
+              <?php if (!$has_comp && !in_array($current_user['role'], ['admin','author'], true)): ?>
+                <a href="<?= e(u('/crear-empresa')) ?>" class="block px-4 py-2.5 text-xs text-azul hover:bg-blue-50 transition border-t border-gray-100">+ Crear perfil de empresa</a>
+              <?php endif; ?>
+              <?php if (!$has_prof && !in_array($current_user['role'], ['admin','author'], true)): ?>
+                <a href="<?= e(u('/crear-perfil')) ?>" class="block px-4 py-2.5 text-xs text-azul hover:bg-blue-50 transition <?= !$has_comp ? '' : 'border-t border-gray-100' ?>">+ Crear perfil profesional</a>
+              <?php endif; ?>
+              <a href="<?= e(u('/notificaciones')) ?>" class="block px-4 py-2.5 text-sm text-gris-oscuro hover:bg-gris-claro hover:text-naranja transition border-t border-gray-100">Notificaciones<?php if ($unread_notifs > 0): ?> <span class="text-coral font-bold">(<?= (int)$unread_notifs ?>)</span><?php endif; ?></a>
               <a href="<?= e(u('/logout')) ?>" class="block px-4 py-2.5 text-sm text-coral hover:bg-red-50 transition border-t border-gray-100">Cerrar sesión</a>
             </div>
           </div>
