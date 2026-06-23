@@ -1,6 +1,7 @@
 <?php
 // Public pages bootstrap — include once at the top of every .php page.
 require_once __DIR__ . '/helpers.php';
+require_once __DIR__ . '/errors.php';
 require_once __DIR__ . '/db.php';
 require_once __DIR__ . '/repositories/Article.php';
 require_once __DIR__ . '/repositories/Professional.php';

@@ -19,9 +19,13 @@ include __DIR__ . '/includes/header.php';
 
   <section class="bg-gris-claro py-10 px-6">
     <div class="max-w-6xl mx-auto flex flex-wrap gap-6 items-start">
-      <div class="w-24 h-24 rounded-full bg-<?= e($color) ?> flex items-center justify-center text-white text-3xl font-bold shrink-0">
-        <?= e(mb_substr($p['name'], 0, 1)) ?><?= e(mb_substr(strstr($p['name'], ' ') ?: ' ', 1, 1)) ?>
-      </div>
+      <?php if (!empty($p['avatar_image'])): ?>
+        <img src="<?= e(img_url($p['avatar_image'])) ?>" alt="<?= e($p['name']) ?>" class="w-24 h-24 rounded-full object-cover shrink-0 bg-gris-claro" />
+      <?php else: ?>
+        <div class="w-24 h-24 rounded-full bg-<?= e($color) ?> flex items-center justify-center text-white text-3xl font-bold shrink-0">
+          <?= e(mb_substr($p['name'], 0, 1)) ?><?= e(mb_substr(strstr($p['name'], ' ') ?: ' ', 1, 1)) ?>
+        </div>
+      <?php endif; ?>
       <div class="flex-1 min-w-[250px]">
         <div class="flex items-center gap-2">
           <h1 class="text-3xl font-extrabold"><?= e($p['name']) ?></h1>
