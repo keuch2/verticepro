@@ -1,4 +1,7 @@
 includes/config.php
+deploy.sh
+deploy.local.sh
+.deploy.env
 logs/
 *.log
 .DS_Store
