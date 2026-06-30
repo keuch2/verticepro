@@ -6,8 +6,10 @@ include __DIR__ . '/_layout.php';
 $counts = [
     'articles'      => DB::one("SELECT COUNT(*) c FROM articles")['c'],
     'articles_pub'  => DB::one("SELECT COUNT(*) c FROM articles WHERE status='published'")['c'],
-    'professionals' => DB::one("SELECT COUNT(*) c FROM professionals WHERE status='active'")['c'],
-    'companies'     => DB::one("SELECT COUNT(*) c FROM companies WHERE status='active'")['c'],
+    'professionals'      => DB::one("SELECT COUNT(*) c FROM professionals")['c'],
+    'professionals_pend' => DB::one("SELECT COUNT(*) c FROM professionals WHERE status='pending'")['c'],
+    'companies'          => DB::one("SELECT COUNT(*) c FROM companies")['c'],
+    'companies_pend'     => DB::one("SELECT COUNT(*) c FROM companies WHERE status='pending'")['c'],
     'jobs'          => DB::one("SELECT COUNT(*) c FROM job_offers WHERE status='published'")['c'],
     'services'      => DB::one("SELECT COUNT(*) c FROM services WHERE status='published'")['c'],
     'publications'  => DB::one("SELECT COUNT(*) c FROM publications WHERE status='published'")['c'],
@@ -20,8 +22,8 @@ $recent = DB::all("SELECT id, slug, title, status, updated_at FROM articles ORDE
 <div class="stats-grid">
   <div class="stat"><div class="label">Artículos publicados</div><div class="value"><?= (int)$counts['articles_pub'] ?></div></div>
   <div class="stat"><div class="label">Artículos totales</div><div class="value"><?= (int)$counts['articles'] ?></div></div>
-  <div class="stat"><div class="label">Profesionales</div><div class="value"><?= (int)$counts['professionals'] ?></div></div>
-  <div class="stat"><div class="label">Empresas</div><div class="value"><?= (int)$counts['companies'] ?></div></div>
+  <div class="stat"><div class="label">Profesionales</div><div class="value"><?= (int)$counts['professionals'] ?></div><?php if ((int)$counts['professionals_pend'] > 0): ?><div class="label" style="color:#F58220;text-transform:none;margin-top:4px;"><?= (int)$counts['professionals_pend'] ?> pendiente<?= (int)$counts['professionals_pend'] === 1 ? '' : 's' ?></div><?php endif; ?></div>
+  <div class="stat"><div class="label">Empresas</div><div class="value"><?= (int)$counts['companies'] ?></div><?php if ((int)$counts['companies_pend'] > 0): ?><div class="label" style="color:#F58220;text-transform:none;margin-top:4px;"><?= (int)$counts['companies_pend'] ?> pendiente<?= (int)$counts['companies_pend'] === 1 ? '' : 's' ?></div><?php endif; ?></div>
   <div class="stat"><div class="label">Ofertas activas</div><div class="value"><?= (int)$counts['jobs'] ?></div></div>
   <div class="stat"><div class="label">Servicios</div><div class="value"><?= (int)$counts['services'] ?></div></div>
   <div class="stat"><div class="label">Publicaciones</div><div class="value"><?= (int)$counts['publications'] ?></div></div>

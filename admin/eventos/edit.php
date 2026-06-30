@@ -20,6 +20,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     ];
     if (!$data['title'])     { flash('err','Título requerido'); redirect('/admin/eventos/edit.php' . ($id ? "?id=$id" : '')); }
     if (!$data['starts_at']) { flash('err','Fecha requerida'); redirect('/admin/eventos/edit.php' . ($id ? "?id=$id" : '')); }
+    // La fecha de fin (opcional) no puede ser anterior a la de inicio.
+    if ($data['ends_at'] && strtotime($data['ends_at']) < strtotime($data['starts_at'])) {
+        flash('err','La fecha de fin no puede ser anterior a la de inicio');
+        redirect('/admin/eventos/edit.php' . ($id ? "?id=$id" : ''));
+    }
 
     if (!empty($_FILES['cover']['name'])) {
         $rel = upload_image($_FILES['cover'], 'events', $data['slug']);

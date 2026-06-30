@@ -20,10 +20,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         'verified' => post_bool('verified'),
         'available' => post_bool('available'),
         'featured' => post_bool('featured'),
-        'stats_years_exp' => post_int('stats_years_exp') ?? 0,
-        'stats_articles' => post_int('stats_articles') ?? 0,
-        'stats_connections' => post_int('stats_connections') ?? 0,
-        'stats_projects' => post_int('stats_projects') ?? 0,
+        // Las estadísticas no pueden ser negativas ni absurdamente grandes
+        // (aparecen en el perfil público). Se acotan a rangos razonables.
+        'stats_years_exp'   => max(0, min(80,   post_int('stats_years_exp')   ?? 0)),
+        'stats_articles'    => max(0, min(9999, post_int('stats_articles')    ?? 0)),
+        'stats_connections' => max(0, min(9999, post_int('stats_connections') ?? 0)),
+        'stats_projects'    => max(0, min(9999, post_int('stats_projects')    ?? 0)),
         'status' => post('status','active'),
     ];
     if (!$data['name']) { flash('err','Nombre requerido'); redirect('/admin/profesionales/edit.php'.($id?"?id=$id":'')); }
@@ -123,12 +125,12 @@ include __DIR__ . '/../_layout.php';
     </div>
     <div><label>Website</label><input name="website" value="<?= e($p['website']??'') ?>" /></div>
     <div class="form-grid cols-2">
-      <div><label>Años experiencia</label><input type="number" name="stats_years_exp" value="<?= (int)($p['stats_years_exp']??0) ?>" /></div>
-      <div><label>Artículos publicados</label><input type="number" name="stats_articles" value="<?= (int)($p['stats_articles']??0) ?>" /></div>
+      <div><label>Años experiencia</label><input type="number" name="stats_years_exp" min="0" max="80" value="<?= (int)($p['stats_years_exp']??0) ?>" /></div>
+      <div><label>Artículos publicados</label><input type="number" name="stats_articles" min="0" max="9999" value="<?= (int)($p['stats_articles']??0) ?>" /></div>
     </div>
     <div class="form-grid cols-2">
-      <div><label>Conexiones</label><input type="number" name="stats_connections" value="<?= (int)($p['stats_connections']??0) ?>" /></div>
-      <div><label>Proyectos</label><input type="number" name="stats_projects" value="<?= (int)($p['stats_projects']??0) ?>" /></div>
+      <div><label>Conexiones</label><input type="number" name="stats_connections" min="0" max="9999" value="<?= (int)($p['stats_connections']??0) ?>" /></div>
+      <div><label>Proyectos</label><input type="number" name="stats_projects" min="0" max="9999" value="<?= (int)($p['stats_projects']??0) ?>" /></div>
     </div>
     <div style="display:flex;gap:20px;">
       <label><input type="checkbox" name="verified" value="1" <?= !empty($p['verified'])?'checked':'' ?> style="width:auto;" /> Verificado</label>

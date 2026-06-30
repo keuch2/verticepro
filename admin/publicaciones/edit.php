@@ -31,8 +31,8 @@ if ($_SERVER['REQUEST_METHOD']==='POST') {
         }
     }
 
-    if ($is_new) { $id = DB::insert('publications', $data); flash('ok','Creada'); }
-    else         { DB::update('publications', $data, ['id'=>$id]); flash('ok','Actualizada'); }
+    if ($is_new) { $id = DB::insert('publications', $data); flash('ok','Publicación creada'); }
+    else         { DB::update('publications', $data, ['id'=>$id]); flash('ok','Publicación actualizada'); }
     redirect('/admin/publicaciones/edit.php?id='.$id);
 }
 if (isset($_GET['delete']) && $id) { csrf_check(); DB::delete('publications',['id'=>$id]); flash('ok','Eliminada'); redirect('/admin/publicaciones/'); }

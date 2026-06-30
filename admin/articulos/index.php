@@ -16,7 +16,7 @@ include __DIR__ . '/../_layout.php';
   <a href="<?= e(u('/admin/articulos/edit.php')) ?>" class="btn">+ Nuevo artículo</a>
 </div>
 <form class="card" method="get" style="padding:14px;display:flex;gap:8px;align-items:center;">
-  <input type="text" name="q" placeholder="Buscar por título..." value="<?= e($filters['q']) ?>" style="flex:1;" />
+  <input type="text" name="q" placeholder="Buscar por título..." value="<?= e($filters['q']) ?>" style="flex:1 1 220px;min-width:200px;" />
   <select name="status">
     <option value="">Todos los estados</option>
     <option value="published" <?= $filters['status']==='published'?'selected':'' ?>>Publicados</option>

@@ -60,8 +60,8 @@ include __DIR__ . '/../_layout.php';
       <div><label>Estado</label><select name="status"><?php foreach (['draft','published','closed'] as $s): ?><option value="<?= $s ?>" <?= ($o['status']??'')===$s?'selected':'' ?>><?= $s ?></option><?php endforeach; ?></select></div>
     </div>
     <div class="form-grid cols-2">
-      <div><label>Salario min (€/año)</label><input type="number" name="salary_min" value="<?= e($o['salary_min']??'') ?>" /></div>
-      <div><label>Salario max (€/año)</label><input type="number" name="salary_max" value="<?= e($o['salary_max']??'') ?>" /></div>
+      <div><label>Salario min (Gs.)</label><input type="number" name="salary_min" min="0" value="<?= e($o['salary_min']??'') ?>" /></div>
+      <div><label>Salario max (Gs.)</label><input type="number" name="salary_max" min="0" value="<?= e($o['salary_max']??'') ?>" /></div>
     </div>
     <div><label>Fecha publicación</label><input type="datetime-local" name="published_at" value="<?= $o?date('Y-m-d\TH:i',strtotime($o['published_at']??'now')):'' ?>" /></div>
     <div><label>Flyer / imagen</label>

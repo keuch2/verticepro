@@ -5,6 +5,8 @@ if ($me['role'] !== 'admin') { http_response_code(403); exit('Solo admin'); }
 
 $id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
 $u = $id ? DB::one('SELECT * FROM users WHERE id=?',[$id]) : null;
+// Si se pidió un id concreto que no existe, es un 404 — no un "usuario nuevo".
+if ($id && !$u) { http_response_code(404); flash('err','Usuario no encontrado'); redirect('/admin/usuarios/'); }
 $is_new = !$u;
 
 if ($_SERVER['REQUEST_METHOD']==='POST') {
@@ -17,12 +19,25 @@ if ($_SERVER['REQUEST_METHOD']==='POST') {
     ];
     if (!$data['email'] || !$data['name']) { flash('err','Email y nombre requeridos'); redirect('/admin/usuarios/edit.php'.($id?"?id=$id":'')); }
     $new_pass = post('password','');
+    // Longitud mínima de contraseña (cuentas con acceso al panel).
+    if ($new_pass !== '' && strlen($new_pass) < 8) {
+        flash('err','La contraseña debe tener al menos 8 caracteres');
+        redirect('/admin/usuarios/edit.php'.($id?"?id=$id":''));
+    }
     if ($new_pass) $data['password_hash'] = password_hash($new_pass, PASSWORD_DEFAULT);
-    if ($is_new) {
-        if (!$new_pass) { flash('err','Contraseña requerida para nuevo usuario'); redirect('/admin/usuarios/edit.php'); }
-        $id = DB::insert('users', $data); flash('ok','Creado');
-    } else {
-        DB::update('users', $data, ['id'=>$id]); flash('ok','Actualizado');
+    if ($is_new && !$new_pass) { flash('err','Contraseña requerida para nuevo usuario'); redirect('/admin/usuarios/edit.php'); }
+    // El email es UNIQUE: si ya existe, MySQL lanza una excepción de duplicado.
+    // La capturamos para mostrar un mensaje claro en vez de una pantalla de error.
+    try {
+        if ($is_new) { $id = DB::insert('users', $data); flash('ok','Usuario creado'); }
+        else         { DB::update('users', $data, ['id'=>$id]); flash('ok','Usuario actualizado'); }
+    } catch (\PDOException $e) {
+        if ($e->getCode() === '23000') {
+            flash('err','Ya existe un usuario con ese email');
+        } else {
+            flash('err','No se pudo guardar el usuario');
+        }
+        redirect('/admin/usuarios/edit.php'.($id?"?id=$id":''));
     }
     redirect('/admin/usuarios/edit.php?id='.$id);
 }
@@ -59,7 +74,7 @@ include __DIR__ . '/../_layout.php';
         </select>
       </div>
     </div>
-    <div><label>Contraseña <?= $is_new?'':'(dejar vacía para no cambiar)' ?></label><input type="password" name="password" <?= $is_new?'required':'' ?> /></div>
+    <div><label>Contraseña <?= $is_new?'(mínimo 8 caracteres)':'(dejar vacía para no cambiar)' ?></label><input type="password" name="password" minlength="8" <?= $is_new?'required':'' ?> /></div>
     <button class="btn" type="submit"><?= $is_new?'Crear':'Guardar' ?></button>
   </div>
 </form>

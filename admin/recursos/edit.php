@@ -15,7 +15,8 @@ if ($_SERVER['REQUEST_METHOD']==='POST') {
     ];
     if (!$data['title']) { flash('err','Título requerido'); redirect('/admin/recursos/edit.php'.($id?"?id=$id":'')); }
 
-    if (!empty($_FILES['file']['name']) && ($_FILES['file']['error'] ?? 1) === UPLOAD_ERR_OK) {
+    $has_upload = !empty($_FILES['file']['name']) && ($_FILES['file']['error'] ?? 1) === UPLOAD_ERR_OK;
+    if ($has_upload) {
         $dir = cfg()['img_path'] . '/../uploads/resources';
         if (!is_dir($dir)) mkdir($dir, 0755, true);
         $filename = $data['slug'] . '-' . time() . '.' . pathinfo($_FILES['file']['name'], PATHINFO_EXTENSION);
@@ -24,13 +25,23 @@ if ($_SERVER['REQUEST_METHOD']==='POST') {
         }
     }
 
-    if ($is_new) { $id = DB::insert('resources', $data); flash('ok','Creado'); }
-    else         { DB::update('resources', $data, ['id'=>$id]); flash('ok','Actualizado'); }
+    // Un recurso descargable necesita un archivo: lo exigimos al crear, o al editar
+    // si todavía no había ninguno cargado.
+    if (empty($data['file_path']) && empty($r['file_path'])) {
+        flash_old(); flash('err','Debes adjuntar un archivo para el recurso');
+        redirect('/admin/recursos/edit.php'.($id?"?id=$id":''));
+    }
+
+    if ($is_new) { $id = DB::insert('resources', $data); flash('ok','Recurso creado'); }
+    else         { DB::update('resources', $data, ['id'=>$id]); flash('ok','Recurso actualizado'); }
     redirect('/admin/recursos/edit.php?id='.$id);
 }
 if (isset($_GET['delete']) && $id) { csrf_check(); DB::delete('resources',['id'=>$id]); flash('ok','Eliminado'); redirect('/admin/recursos/'); }
 
 $page_title = $is_new?'Nuevo recurso':'Editar recurso';
+// Tras un error de validación, repoblar con lo que el usuario escribió.
+$f = has_old() ? $_SESSION['old'] : ($r ?? []);
+old_clear();
 include __DIR__ . '/../_layout.php';
 ?>
 <div class="toolbar">
@@ -43,15 +54,16 @@ include __DIR__ . '/../_layout.php';
 <form method="post" enctype="multipart/form-data" class="card">
   <input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>" />
   <div class="form-grid">
-    <div><label>Título</label><input name="title" required value="<?= e($r['title']??'') ?>" /></div>
-    <div><label>Categoría</label><input name="category" value="<?= e($r['category']??'') ?>" /></div>
-    <div><label>Descripción</label><textarea name="description" rows="4"><?= e($r['description']??'') ?></textarea></div>
+    <div><label>Título</label><input name="title" required value="<?= e($f['title'] ?? '') ?>" /></div>
+    <div><label>Categoría</label><input name="category" value="<?= e($f['category'] ?? '') ?>" /></div>
+    <div><label>Descripción</label><textarea name="description" rows="4"><?= e($f['description'] ?? '') ?></textarea></div>
     <div><label>Archivo</label>
       <?php if (!empty($r['file_path'])): ?><div><a href="/<?= e($r['file_path']) ?>" target="_blank">Archivo actual</a></div><?php endif; ?>
       <input type="file" name="file" />
     </div>
     <div><label>Estado</label>
-      <select name="status"><?php foreach (['draft','published'] as $s): ?><option value="<?= $s ?>" <?= ($r['status']??'')===$s?'selected':'' ?>><?= $s ?></option><?php endforeach; ?></select>
+      <?php $cur_status = $f['status'] ?? 'published'; ?>
+      <select name="status"><?php foreach (['draft','published'] as $s): ?><option value="<?= $s ?>" <?= $cur_status===$s?'selected':'' ?>><?= $s ?></option><?php endforeach; ?></select>
     </div>
     <button class="btn" type="submit"><?= $is_new?'Crear':'Guardar' ?></button>
   </div>
