@@ -14,6 +14,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST') {
         'category' => trim(post('category','')) ?: null,
         'modality' => post('modality') ?: null,
         'country_id' => post_int('country_id'),
+        'city_id' => post_int('city_id'),
         'salary_min' => post_int('salary_min'),
         'salary_max' => post_int('salary_max'),
         'published_at' => post('published_at') ?: null,
@@ -56,9 +57,31 @@ include __DIR__ . '/../_layout.php';
       <div><label>Modalidad</label><select name="modality"><option value="">—</option><?php foreach (['presencial','remoto','hibrido'] as $m): ?><option value="<?= $m ?>" <?= ($o['modality']??'')===$m?'selected':'' ?>><?= $m ?></option><?php endforeach; ?></select></div>
     </div>
     <div class="form-grid cols-2">
-      <div><label>País</label><select name="country_id"><option value="">—</option><?= opts(SectionRepo::countries(),'id','name',$o['country_id']??null) ?></select></div>
-      <div><label>Estado</label><select name="status"><?php foreach (['draft','published','closed'] as $s): ?><option value="<?= $s ?>" <?= ($o['status']??'')===$s?'selected':'' ?>><?= $s ?></option><?php endforeach; ?></select></div>
+      <div><label>País</label><select id="oferta-country" name="country_id"><option value="">—</option><?= opts(SectionRepo::countries(),'id','name',$o['country_id']??null) ?></select></div>
+      <div><label>Localidad</label><select id="oferta-city" name="city_id"><option value="">—</option><?php foreach (SectionRepo::cities() as $ci): ?><option value="<?= (int)$ci['id'] ?>" data-country="<?= (int)$ci['country_id'] ?>" <?= (string)($o['city_id']??'') === (string)$ci['id'] ? 'selected':'' ?>><?= e($ci['name']) ?></option><?php endforeach; ?></select></div>
     </div>
+    <div class="form-grid cols-2">
+      <div><label>Estado</label><select name="status"><?php foreach (['draft','published','closed'] as $s): ?><option value="<?= $s ?>" <?= ($o['status']??'')===$s?'selected':'' ?>><?= $s ?></option><?php endforeach; ?></select></div>
+      <div></div>
+    </div>
+    <script>
+      (function() {
+        const country = document.getElementById('oferta-country');
+        const city    = document.getElementById('oferta-city');
+        if (!country || !city) return;
+        function sync() {
+          const c = country.value;
+          Array.from(city.options).forEach(o => {
+            if (!o.value) return;
+            const match = o.dataset.country === c;
+            o.hidden = !match;
+            if (o.hidden && o.selected) city.value = '';
+          });
+        }
+        country.addEventListener('change', sync);
+        sync();
+      })();
+    </script>
     <div class="form-grid cols-2">
       <div><label>Salario min (Gs.)</label><input type="number" name="salary_min" min="0" value="<?= e($o['salary_min']??'') ?>" /></div>
       <div><label>Salario max (Gs.)</label><input type="number" name="salary_max" min="0" value="<?= e($o['salary_max']??'') ?>" /></div>

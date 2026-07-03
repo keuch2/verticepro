@@ -6,7 +6,7 @@ if (session_status() !== PHP_SESSION_ACTIVE) session_start();
 $errors = [];
 $old = [
     'company_email' => '', 'title' => '', 'description' => '',
-    'category' => '', 'modality' => '', 'country_id' => '',
+    'category' => '', 'modality' => '', 'country_id' => '', 'city_id' => '',
     'salary_min' => '', 'salary_max' => '',
 ];
 $submitted_ok = false;
@@ -51,16 +51,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'category'     => $old['category'] ?: null,
             'modality'     => $old['modality'] ?: null,
             'country_id'   => $old['country_id'] !== '' ? (int)$old['country_id'] : null,
+            'city_id'      => $old['city_id'] !== '' ? (int)$old['city_id'] : null,
             'salary_min'   => $old['salary_min'] !== '' ? (int)$old['salary_min'] : null,
             'salary_max'   => $old['salary_max'] !== '' ? (int)$old['salary_max'] : null,
             'status'       => 'draft',
         ]);
         $submitted_ok = true;
-        $old = ['company_email'=>'','title'=>'','description'=>'','category'=>'','modality'=>'','country_id'=>'','salary_min'=>'','salary_max'=>''];
+        $old = ['company_email'=>'','title'=>'','description'=>'','category'=>'','modality'=>'','country_id'=>'','city_id'=>'','salary_min'=>'','salary_max'=>''];
     }
 }
 
 $countries = SectionRepo::countries();
+$cities    = SectionRepo::cities();
 $default_country_id = (int)(DB::one("SELECT id FROM countries WHERE slug = 'paraguay'")['id'] ?? 0);
 $selected_country = $old['country_id'] !== '' ? (int)$old['country_id'] : $default_country_id;
 
@@ -103,7 +105,7 @@ include __DIR__ . '/includes/header.php';
         <textarea name="description" rows="6" required class="w-full border <?= isset($errors['description'])?'border-coral':'border-gray-300' ?> rounded px-3 py-2"><?= e($old['description']) ?></textarea>
       </div>
 
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
           <label class="block text-sm font-semibold mb-1">Categoría</label>
           <input name="category" value="<?= e($old['category']) ?>" placeholder="Seguridad, Calidad, ESG…" class="w-full border border-gray-300 rounded px-3 py-2" />
@@ -119,13 +121,48 @@ include __DIR__ . '/includes/header.php';
         </div>
         <div>
           <label class="block text-sm font-semibold mb-1">País</label>
-          <select name="country_id" class="w-full border border-gray-300 rounded px-3 py-2 bg-white">
+          <select id="oferta-country" name="country_id" class="w-full border border-gray-300 rounded px-3 py-2 bg-white">
             <?php foreach ($countries as $c): ?>
               <option value="<?= (int)$c['id'] ?>" <?= (int)$selected_country === (int)$c['id'] ? 'selected':'' ?>><?= e($c['name']) ?></option>
             <?php endforeach; ?>
           </select>
         </div>
+        <div>
+          <label class="block text-sm font-semibold mb-1">Localidad</label>
+          <select id="oferta-city" name="city_id" class="w-full border border-gray-300 rounded px-3 py-2 bg-white">
+            <option value="">— Selecciona —</option>
+            <?php foreach ($cities as $c): ?>
+              <option value="<?= (int)$c['id'] ?>" data-country="<?= (int)$c['country_id'] ?>" <?= (string)$old['city_id'] === (string)$c['id'] ? 'selected' : '' ?>><?= e($c['name']) ?></option>
+            <?php endforeach; ?>
+          </select>
+        </div>
       </div>
+
+      <script>
+        (function() {
+          const country = document.getElementById('oferta-country');
+          const city    = document.getElementById('oferta-city');
+          if (!country || !city) return;
+          function sync() {
+            const c = country.value;
+            let matches = 0;
+            Array.from(city.options).forEach(o => {
+              if (!o.value) return;
+              const match = o.dataset.country === c;
+              o.hidden = !match;
+              if (match) matches++;
+              if (o.hidden && o.selected) city.value = '';
+            });
+            const ph = city.querySelector('option[value=""]');
+            if (ph) {
+              if (matches) ph.textContent = '— Selecciona —';
+              else { ph.textContent = 'No aplica para este país'; city.value = ''; }
+            }
+          }
+          country.addEventListener('change', sync);
+          sync();
+        })();
+      </script>
 
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>

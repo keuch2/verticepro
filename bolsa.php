@@ -54,7 +54,8 @@ include __DIR__ . '/includes/header.php';
             <?php endif; ?>
             <div class="flex-1 min-w-[250px]">
               <h3 class="font-bold text-texto text-lg"><?= e($o['title']) ?></h3>
-              <p class="text-sm text-gris-oscuro mt-0.5"><?= e($o['company_name']) ?> · <?= e($o['country_name']) ?></p>
+              <?php $loc = trim(implode(', ', array_filter([$o['city_name'] ?? '', $o['country_name'] ?? '']))); ?>
+              <p class="text-sm text-gris-oscuro mt-0.5"><?= e($o['company_name']) ?><?= $loc !== '' ? ' · ' . e($loc) : '' ?></p>
               <p class="text-sm text-gris-oscuro mt-3 leading-relaxed"><?= e(mb_strimwidth($o['description'] ?? '', 0, 220, '…')) ?></p>
             </div>
             <div class="flex flex-col items-end gap-2">
