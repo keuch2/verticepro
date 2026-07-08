@@ -8,10 +8,17 @@ DirectoryIndex index.php index.html
     # Bloquear acceso directo a carpetas sensibles
     RewriteRule ^(includes|sql|logs)(/|$) - [F,L]
 
+    # Redirects 301: rutas antiguas "empresa(s)" -> "organizacion(es)"
+    RewriteRule ^empresas/?$ /organizaciones [R=301,L]
+    RewriteRule ^empresa/([a-z0-9-]+)/?$ /organizacion/$1 [R=301,L]
+    RewriteRule ^mi-empresa/?$ /mi-organizacion [R=301,L]
+    RewriteRule ^crear-empresa/?$ /crear-organizacion [R=301,L]
+    RewriteRule ^registro-empresa/?$ /registro-organizacion [R=301,L]
+
     # URLs limpias para contenido
     RewriteRule ^articulo/([a-z0-9-]+)/?$ articulo.php?slug=$1 [L,QSA]
     RewriteRule ^perfil/([a-z0-9-]+)/?$ perfil.php?slug=$1 [L,QSA]
-    RewriteRule ^empresa/([a-z0-9-]+)/?$ empresa.php?slug=$1 [L,QSA]
+    RewriteRule ^organizacion/([a-z0-9-]+)/?$ organizacion.php?slug=$1 [L,QSA]
     RewriteRule ^oferta/([a-z0-9-]+)/?$ oferta.php?slug=$1 [L,QSA]
     RewriteRule ^seccion/([a-z0-9-]+)/?$ seccion.php?slug=$1 [L,QSA]
     RewriteRule ^publicacion/([a-z0-9-]+)/?$ publicacion.php?slug=$1 [L,QSA]

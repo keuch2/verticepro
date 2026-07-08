@@ -3,7 +3,7 @@ require_once __DIR__ . '/includes/bootstrap.php';
 
 $slug = $_GET['slug'] ?? '';
 $emp = $slug ? CompanyRepo::bySlug($slug) : null;
-if (!$emp) { http_response_code(404); echo 'Empresa no encontrada'; exit; }
+if (!$emp) { http_response_code(404); echo 'Organización no encontrada'; exit; }
 
 $cid = (int)$emp['id'];
 $offers = DB::all(
@@ -26,7 +26,7 @@ $show_phone   = !empty($emp['phone'])   && (int)($emp['visibility_phone']   ?? 0
 $wa_number    = $show_phone ? preg_replace('/[^0-9]/', '', $emp['phone']) : '';
 
 $page_title = $emp['name'] . ' — Vértice Pro';
-$page_active = 'empresa.php';
+$page_active = 'organizacion.php';
 include __DIR__ . '/includes/header.php';
 ?>
 <section class="bg-gris-claro py-10 px-6">
@@ -57,7 +57,7 @@ include __DIR__ . '/includes/header.php';
   <div class="lg:col-span-2 space-y-8">
     <?php if (!empty($emp['description'])): ?>
       <section class="bg-white rounded-lg border border-gray-200 p-6">
-        <h2 class="font-bold text-lg mb-3">Sobre la empresa</h2>
+        <h2 class="font-bold text-lg mb-3">Sobre la organización</h2>
         <p class="text-gris-oscuro leading-relaxed whitespace-pre-line"><?= e($emp['description']) ?></p>
       </section>
     <?php endif; ?>
@@ -79,7 +79,7 @@ include __DIR__ . '/includes/header.php';
         <?php if ($offers): ?><span class="text-sm text-gris-oscuro"><?= count($offers) ?></span><?php endif; ?>
       </div>
       <?php if (!$offers): ?>
-        <p class="text-sm text-gris-oscuro">Esta empresa no tiene ofertas activas en este momento.</p>
+        <p class="text-sm text-gris-oscuro">Esta organización no tiene ofertas activas en este momento.</p>
       <?php else: ?>
         <ul class="space-y-4">
           <?php foreach ($offers as $o): ?>

@@ -149,17 +149,17 @@ $default_country_id = (int)(DB::one("SELECT id FROM countries WHERE slug = 'para
 
 $page_title = 'Únete a la Red — Vértice Pro';
 $page_active = 'registro.php';
-$page_description = 'Crea tu perfil profesional en la Red Vértice Pro: visibilidad ante empresas, colegas y oportunidades en Iberoamérica.';
+$page_description = 'Crea tu perfil profesional en la Red Vértice Pro: visibilidad ante organizaciones, colegas y oportunidades en Iberoamérica.';
 include __DIR__ . '/includes/header.php';
 ?>
   <section class="relative px-6 py-14" style="background: linear-gradient(135deg, rgba(0,120,212,0.92), rgba(24,50,70,0.85)); color:#fff;">
     <div class="max-w-4xl mx-auto">
-      <p class="uppercase tracking-wide text-xs font-bold opacity-80">Red de Profesionales</p>
+      <p class="uppercase tracking-wide text-xs font-bold opacity-80">Red Vértice Pro</p>
       <h1 class="text-4xl font-extrabold mt-2">Únete a la Red Vértice Pro</h1>
-      <p class="text-lg mt-3 opacity-90 max-w-2xl">Crea tu perfil profesional y conecta con consultores, auditores, empresas y oportunidades en calidad, seguridad, salud ocupacional y medio ambiente.</p>
+      <p class="text-lg mt-3 opacity-90 max-w-2xl">Crea tu perfil profesional y conecta con consultores, auditores, organizaciones y oportunidades en calidad, seguridad, salud ocupacional y medio ambiente.</p>
       <ul class="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-6 text-sm">
         <li class="bg-white/10 rounded px-4 py-2">✓ Perfil verificable</li>
-        <li class="bg-white/10 rounded px-4 py-2">✓ Visibilidad ante empresas</li>
+        <li class="bg-white/10 rounded px-4 py-2">✓ Visibilidad ante organizaciones</li>
         <li class="bg-white/10 rounded px-4 py-2">✓ Acceso a la bolsa de trabajo</li>
       </ul>
     </div>

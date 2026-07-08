@@ -7,7 +7,7 @@ $u = require_public_user();
 
 // Si ya tiene empresa vinculada, redirigir al dashboard.
 $already = DB::one('SELECT id FROM companies WHERE user_id = ? LIMIT 1', [(int)$u['id']]);
-if ($already) { redirect('/mi-empresa'); }
+if ($already) { redirect('/mi-organizacion'); }
 
 $errors = [];
 $old = [
@@ -37,7 +37,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $old['visibility_phone']    = !empty($_POST['visibility_phone']) ? 1 : 0;
     $old['notifications_opt_in']= !empty($_POST['notifications_opt_in']) ? 1 : 0;
 
-    if ($old['name'] === '')         $errors['name'] = 'Indica el nombre de la empresa.';
+    if ($old['name'] === '')         $errors['name'] = 'Indica el nombre de la organización.';
     if ($old['country_id'] === '')   $errors['country_id'] = 'Selecciona un país.';
     if (empty($old['sectors']))      $errors['sectors'] = 'Selecciona al menos un sector.';
 
@@ -88,14 +88,14 @@ $cities          = SectionRepo::cities();
 $default_country_id = (int)(DB::one("SELECT id FROM countries WHERE slug = 'paraguay'")['id'] ?? 0);
 $selected_country = $old['country_id'] !== '' ? (int)$old['country_id'] : $default_country_id;
 
-$page_title = 'Crear mi perfil de empresa — Vértice Pro';
-$page_active = 'crear-empresa.php';
+$page_title = 'Crear mi perfil de organización — Vértice Pro';
+$page_active = 'crear-organizacion.php';
 include __DIR__ . '/includes/header.php';
 ?>
 <section class="bg-gris-claro py-8 px-6">
   <div class="max-w-4xl mx-auto">
-    <h1 class="text-2xl font-extrabold">Crear mi perfil de empresa</h1>
-    <p class="text-gris-oscuro text-sm mt-1">Como <?= e($u['name']) ?>, además de tu perfil profesional vas a tener un perfil de empresa vinculado a esta misma cuenta.</p>
+    <h1 class="text-2xl font-extrabold">Crear mi perfil de organización</h1>
+    <p class="text-gris-oscuro text-sm mt-1">Como <?= e($u['name']) ?>, además de tu perfil profesional vas a tener un perfil de organización vinculado a esta misma cuenta.</p>
   </div>
 </section>
 
@@ -103,7 +103,7 @@ include __DIR__ . '/includes/header.php';
   <?php if ($submitted_ok): ?>
     <div class="bg-verde/10 border border-verde rounded-lg p-6">
       <h2 class="text-xl font-extrabold text-verde">¡Solicitud recibida!</h2>
-      <p class="mt-2 text-gris-oscuro">Tu perfil de empresa quedó <strong>pendiente de aprobación</strong>. Te avisaremos por email cuando esté publicado y podrás administrarlo desde <a href="<?= e(u('/mi-empresa')) ?>" class="text-azul hover:underline">Mi empresa</a>.</p>
+      <p class="mt-2 text-gris-oscuro">Tu perfil de organización quedó <strong>pendiente de aprobación</strong>. Te avisaremos por email cuando esté publicado y podrás administrarlo desde <a href="<?= e(u('/mi-organizacion')) ?>" class="text-azul hover:underline">Mi organización</a>.</p>
     </div>
   <?php else: ?>
     <?php if ($errors): ?>
@@ -117,7 +117,7 @@ include __DIR__ . '/includes/header.php';
       <input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>" />
 
       <div>
-        <label class="block text-sm font-semibold mb-1">Nombre de la empresa *</label>
+        <label class="block text-sm font-semibold mb-1">Nombre de la organización *</label>
         <input name="name" required value="<?= e($old['name']) ?>" class="w-full border <?= isset($errors['name'])?'border-coral':'border-gray-300' ?> rounded px-3 py-2" />
       </div>
 

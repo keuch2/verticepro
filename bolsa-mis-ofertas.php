@@ -38,7 +38,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($c) {
             $token = sign_company_token((int)$c['id'], $c['email'], $secret);
             $link = u('/bolsa-mis-ofertas?t=' . $token);
-            Notify::emailOnly($c['email'], $c['name'], 1, 'Acceso a tus ofertas y candidatos', "Hola " . $c['name'] . ",\n\nUsa este enlace (válido 24h) para revisar las ofertas publicadas por tu empresa y los interesados:", $link);
+            Notify::emailOnly($c['email'], $c['name'], 1, 'Acceso a tus ofertas y candidatos', "Hola " . $c['name'] . ",\n\nUsa este enlace (válido 24h) para revisar las ofertas publicadas por tu organización y los interesados:", $link);
         }
         $sent = true;
     }
@@ -60,7 +60,7 @@ include __DIR__ . '/includes/header.php';
 ?>
 <section class="max-w-4xl mx-auto px-6 py-14">
   <h1 class="text-3xl font-extrabold">Mis ofertas e interesados</h1>
-  <p class="text-gris-oscuro mt-2">Si tu empresa publicó ofertas en la Bolsa, aquí puedes consultar quién ha marcado interés.</p>
+  <p class="text-gris-oscuro mt-2">Si tu organización publicó ofertas en la Bolsa, aquí puedes consultar quién ha marcado interés.</p>
 
   <?php if ($err): ?>
     <div class="bg-red-50 border border-coral text-coral rounded p-4 mt-6 text-sm"><?= e($err) ?></div>
@@ -112,7 +112,7 @@ include __DIR__ . '/includes/header.php';
     <form method="post" class="bg-white border border-gray-200 rounded-lg p-6 mt-6 space-y-4">
       <input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>" />
       <div>
-        <label class="block text-sm font-semibold mb-1">Email registrado de tu empresa</label>
+        <label class="block text-sm font-semibold mb-1">Email registrado de tu organización</label>
         <input name="email" type="email" required class="w-full border border-gray-300 rounded px-3 py-2" />
         <p class="text-xs text-gris-oscuro mt-1">Te enviaremos un enlace seguro de acceso temporal (válido 24h).</p>
       </div>
@@ -120,7 +120,7 @@ include __DIR__ . '/includes/header.php';
     </form>
   <?php else: ?>
     <div class="bg-verde/10 border border-verde rounded p-4 mt-6 text-texto">
-      Si el email coincide con una empresa registrada, te enviamos un enlace de acceso. Revisa tu bandeja de entrada.
+      Si el email coincide con una organización registrada, te enviamos un enlace de acceso. Revisa tu bandeja de entrada.
     </div>
   <?php endif; ?>
 </section>

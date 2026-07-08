@@ -133,5 +133,5 @@ if (!empty($offer['company_email'])) {
     }
 }
 
-flash('bolsa_ok', '¡Listo! Marcamos tu interés en "' . $offer['title'] . '". La empresa recibirá tus datos.');
+flash('bolsa_ok', '¡Listo! Marcamos tu interés en "' . $offer['title'] . '". La organización recibirá tus datos.');
 redirect('/bolsa');

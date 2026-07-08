@@ -9,9 +9,9 @@ $u = require_company();
 $c = current_company();
 
 if (!$c) {
-    $page_title = 'Mi empresa — Vértice Pro';
+    $page_title = 'Mi organización — Vértice Pro';
     include __DIR__ . '/includes/header.php';
-    echo '<section class="max-w-3xl mx-auto px-6 py-16"><p>No encontramos el perfil de empresa vinculado a tu cuenta. Contacta a soporte.</p></section>';
+    echo '<section class="max-w-3xl mx-auto px-6 py-16"><p>No encontramos el perfil de organización vinculado a tu cuenta. Contacta a soporte.</p></section>';
     include __DIR__ . '/includes/footer.php';
     return;
 }
@@ -150,7 +150,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     'rejected'    => 'No avanza',
                 ][$status];
                 $title = 'Cambio de estado en tu postulación';
-                $body  = 'La empresa ' . $c['name'] . ' actualizó el estado de tu postulación a "' . $row['offer_title'] . '": ahora figura como "' . $status_label . '".';
+                $body  = 'La organización ' . $c['name'] . ' actualizó el estado de tu postulación a "' . $row['offer_title'] . '": ahora figura como "' . $status_label . '".';
                 $link  = u('/mi-perfil?tab=intereses');
                 if (!empty($row['user_id'])) {
                     Notify::create((int)$row['user_id'], 'application_status_changed', $title, $body, $link, $row['guest_email']);
@@ -179,7 +179,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     'body'           => $body,
                 ]);
                 $title = 'Nuevo mensaje sobre tu postulación';
-                $msg   = 'La empresa ' . $c['name'] . ' te envió un mensaje sobre tu postulación a "' . $row['offer_title'] . '":' . "\n\n" . $body;
+                $msg   = 'La organización ' . $c['name'] . ' te envió un mensaje sobre tu postulación a "' . $row['offer_title'] . '":' . "\n\n" . $body;
                 $link  = u('/mi-perfil?tab=intereses&open=' . $iid);
                 if (!empty($row['user_id'])) {
                     Notify::create((int)$row['user_id'], 'application_message', $title, $msg, $link, $row['guest_email']);
@@ -219,13 +219,13 @@ $my_interests = DB::all(
     [(int)$c['id']]
 );
 
-$page_title = 'Mi empresa — Vértice Pro';
-$page_active = 'mi-empresa.php';
+$page_title = 'Mi organización — Vértice Pro';
+$page_active = 'mi-organizacion.php';
 include __DIR__ . '/includes/header.php';
 
 function tab_link_emp(string $t, string $current, string $label, ?int $count = null): string {
     $cls = $t === $current ? 'border-naranja text-naranja' : 'border-transparent text-gris-oscuro hover:text-naranja';
-    $url = e(u('/mi-empresa?tab=' . $t));
+    $url = e(u('/mi-organizacion?tab=' . $t));
     $badge = $count !== null ? '<span class="ml-1.5 text-xs bg-gray-200 text-gris-oscuro rounded-full px-1.5">' . $count . '</span>' : '';
     return '<a href="' . $url . '" class="px-1 py-3 border-b-2 ' . $cls . ' font-semibold text-sm transition">' . e($label) . $badge . '</a>';
 }
@@ -234,7 +234,7 @@ function tab_link_emp(string $t, string $current, string $label, ?int $count = n
 <?php if (!$__has_prof): ?>
   <div class="max-w-5xl mx-auto px-6 mt-4">
     <div class="bg-azul/10 border border-azul rounded-lg px-4 py-3 flex flex-wrap items-center justify-between gap-3">
-      <p class="text-sm text-texto">¿Querés sumar tu perfil profesional? Podés crearlo vinculado a esta misma cuenta y aparecer en la Red de Profesionales.</p>
+      <p class="text-sm text-texto">¿Querés sumar tu perfil profesional? Podés crearlo vinculado a esta misma cuenta y aparecer en la Red Vértice Pro.</p>
       <a href="<?= e(u('/crear-perfil')) ?>" class="bg-azul text-white text-sm font-semibold px-4 py-2 rounded hover:bg-blue-700 transition">+ Crear perfil profesional</a>
     </div>
   </div>
@@ -243,14 +243,14 @@ function tab_link_emp(string $t, string $current, string $label, ?int $count = n
 <section class="bg-gris-claro py-8 px-6">
   <div class="max-w-5xl mx-auto flex flex-wrap items-end justify-between gap-3">
     <div>
-      <h1 class="text-2xl font-extrabold">Mi empresa</h1>
-      <p class="text-gris-oscuro text-sm mt-1"><?= e($c['name']) ?> · <a href="<?= e(u('/empresa/' . $c['slug'])) ?>" target="_blank" class="text-azul hover:underline">Ver perfil público →</a></p>
+      <h1 class="text-2xl font-extrabold">Mi organización</h1>
+      <p class="text-gris-oscuro text-sm mt-1"><?= e($c['name']) ?> · <a href="<?= e(u('/organizacion/' . $c['slug'])) ?>" target="_blank" class="text-azul hover:underline">Ver perfil público →</a></p>
     </div>
     <div class="text-sm">
       <?php if ($c['status'] === 'pending'): ?>
         <span class="bg-orange-100 text-naranja px-3 py-1 rounded-full font-semibold">Pendiente de aprobación</span>
       <?php elseif ($c['status'] === 'active'): ?>
-        <span class="bg-verde/10 text-verde px-3 py-1 rounded-full font-semibold">Empresa activa</span>
+        <span class="bg-verde/10 text-verde px-3 py-1 rounded-full font-semibold">Organización activa</span>
       <?php else: ?>
         <span class="bg-red-50 text-coral px-3 py-1 rounded-full font-semibold"><?= e(ucfirst($c['status'])) ?></span>
       <?php endif; ?>
@@ -260,7 +260,7 @@ function tab_link_emp(string $t, string $current, string $label, ?int $count = n
 
 <section class="max-w-5xl mx-auto px-6">
   <nav class="flex flex-wrap gap-5 border-b border-gray-200">
-    <?= tab_link_emp('datos',       $tab, 'Datos de la empresa') ?>
+    <?= tab_link_emp('datos',       $tab, 'Datos de la organización') ?>
     <?= tab_link_emp('ofertas',     $tab, 'Mis ofertas', count($my_offers)) ?>
     <?= tab_link_emp('interesados', $tab, 'Interesados', count($my_interests)) ?>
     <?= tab_link_emp('password',    $tab, 'Contraseña') ?>
@@ -404,7 +404,7 @@ function tab_link_emp(string $t, string $current, string $label, ?int $count = n
 <?php elseif ($tab === 'ofertas'): ?>
   <?php if ($c['status'] !== 'active'): ?>
     <div class="bg-orange-50 border border-naranja rounded p-4 mb-6 text-sm">
-      Tu empresa está pendiente de aprobación. Podrás publicar ofertas en cuanto sea aprobada.
+      Tu organización está pendiente de aprobación. Podrás publicar ofertas en cuanto sea aprobada.
     </div>
   <?php endif; ?>
 
@@ -437,7 +437,7 @@ function tab_link_emp(string $t, string $current, string $label, ?int $count = n
       <div>
         <label class="block text-sm font-semibold mb-1">Flyer / imagen (opcional)</label>
         <input name="flyer" type="file" accept="image/*" class="w-full border border-gray-300 rounded px-3 py-2 text-sm" />
-        <p class="text-xs text-gris-oscuro mt-1">Se mostrará en la Bolsa y en tu perfil de empresa.</p>
+        <p class="text-xs text-gris-oscuro mt-1">Se mostrará en la Bolsa y en tu perfil de organización.</p>
       </div>
       <button class="bg-naranja text-white font-semibold px-6 py-2.5 rounded hover:bg-orange-600 transition" type="submit">Publicar oferta</button>
     </form>
@@ -464,7 +464,7 @@ function tab_link_emp(string $t, string $current, string $label, ?int $count = n
               </div>
             </div>
             <div class="text-right">
-              <a href="<?= e(u('/mi-empresa?tab=interesados&offer=' . (int)$o['id'])) ?>" class="text-sm text-azul font-semibold hover:underline"><?= (int)$interest_count ?> interesado<?= (int)$interest_count === 1 ? '' : 's' ?> →</a>
+              <a href="<?= e(u('/mi-organizacion?tab=interesados&offer=' . (int)$o['id'])) ?>" class="text-sm text-azul font-semibold hover:underline"><?= (int)$interest_count ?> interesado<?= (int)$interest_count === 1 ? '' : 's' ?> →</a>
               <div class="mt-2 flex gap-2">
                 <?php if ($o['status'] === 'published'): ?>
                   <form method="post" class="inline"><input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>" /><input type="hidden" name="action" value="close_offer" /><input type="hidden" name="offer_id" value="<?= (int)$o['id'] ?>" /><button class="text-xs border border-coral text-coral px-3 py-1 rounded hover:bg-red-50">Cerrar</button></form>
@@ -499,7 +499,7 @@ function tab_link_emp(string $t, string $current, string $label, ?int $count = n
     ];
   ?>
   <?php if ($filter_offer): ?>
-    <p class="mb-4 text-sm">Filtrando interesados en oferta #<?= $filter_offer ?>. <a href="<?= e(u('/mi-empresa?tab=interesados')) ?>" class="text-azul hover:underline">Ver todos</a></p>
+    <p class="mb-4 text-sm">Filtrando interesados en oferta #<?= $filter_offer ?>. <a href="<?= e(u('/mi-organizacion?tab=interesados')) ?>" class="text-azul hover:underline">Ver todos</a></p>
   <?php endif; ?>
   <?php if (!$filtered): ?>
     <p class="text-gris-oscuro">No tienes interesados todavía.</p>
@@ -553,7 +553,7 @@ function tab_link_emp(string $t, string $current, string $label, ?int $count = n
                 </select>
                 <button class="text-xs bg-azul text-white px-2 py-1 rounded hover:bg-blue-700" type="submit">Aplicar</button>
               </form>
-              <a href="<?= e(u('/mi-empresa?tab=interesados' . ($filter_offer ? '&offer=' . $filter_offer : '') . ($is_open ? '' : '&open=' . (int)$i['id']))) ?>#int-<?= (int)$i['id'] ?>" id="int-<?= (int)$i['id'] ?>" class="text-xs text-azul hover:underline">
+              <a href="<?= e(u('/mi-organizacion?tab=interesados' . ($filter_offer ? '&offer=' . $filter_offer : '') . ($is_open ? '' : '&open=' . (int)$i['id']))) ?>#int-<?= (int)$i['id'] ?>" id="int-<?= (int)$i['id'] ?>" class="text-xs text-azul hover:underline">
                 💬 <?= $is_open ? 'Ocultar conversación' : 'Ver conversación' ?> <?= count($messages) ? '(' . count($messages) . ')' : '' ?>
               </a>
             </div>
@@ -566,7 +566,7 @@ function tab_link_emp(string $t, string $current, string $label, ?int $count = n
                   <?php foreach ($messages as $m): $is_company = $m['sender_role'] === 'company'; ?>
                     <li class="flex <?= $is_company ? 'justify-end' : 'justify-start' ?>">
                       <div class="max-w-[80%] <?= $is_company ? 'bg-azul/10 text-texto' : 'bg-gray-100 text-texto' ?> rounded-lg px-3 py-2">
-                        <p class="text-xs font-semibold mb-1 <?= $is_company ? 'text-azul' : 'text-gris-oscuro' ?>"><?= $is_company ? 'Tú (empresa)' : e($i['guest_name']) ?></p>
+                        <p class="text-xs font-semibold mb-1 <?= $is_company ? 'text-azul' : 'text-gris-oscuro' ?>"><?= $is_company ? 'Tú (organización)' : e($i['guest_name']) ?></p>
                         <p class="text-sm whitespace-pre-line"><?= e($m['body']) ?></p>
                         <p class="text-[10px] opacity-60 mt-1"><?= e(format_date($m['created_at'])) ?></p>
                       </div>

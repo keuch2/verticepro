@@ -19,9 +19,9 @@ if ($current_user) {
         $has_prof = (bool)DB::one('SELECT id FROM professionals WHERE user_id = ? LIMIT 1', [(int)$current_user['id']]);
         $has_comp = (bool)DB::one('SELECT id FROM companies WHERE user_id = ? LIMIT 1', [(int)$current_user['id']]);
         if ($has_prof)      $my_area_url = '/mi-perfil';
-        elseif ($has_comp)  $my_area_url = '/mi-empresa';
+        elseif ($has_comp)  $my_area_url = '/mi-organizacion';
         elseif ($current_user['role'] === 'professional') $my_area_url = '/mi-perfil';
-        elseif ($current_user['role'] === 'company')      $my_area_url = '/mi-empresa';
+        elseif ($current_user['role'] === 'company')      $my_area_url = '/mi-organizacion';
     }
 }
 
@@ -94,7 +94,7 @@ $c = $page_active;
           </div>
         </div>
         <div class="border-r border-gray-200 h-5 mx-2"></div>
-        <?= nav_link(u('/red'), 'Red de Profesionales', 'red.php', $c) ?>
+        <?= nav_link(u('/red'), 'Red Vértice Pro', 'red.php', $c) ?>
         <?= nav_link(u('/bolsa'), 'Bolsa de Trabajo', 'bolsa.php', $c) ?>
         <?= nav_link(u('/eventos'), 'Eventos', 'eventos.php', $c) ?>
       </nav>
@@ -114,7 +114,7 @@ $c = $page_active;
                 <a href="<?= e(u('/mi-perfil')) ?>" class="block px-4 py-2.5 text-sm text-gris-oscuro hover:bg-gris-claro hover:text-naranja transition">Mi perfil profesional</a>
               <?php endif; ?>
               <?php if ($has_comp): ?>
-                <a href="<?= e(u('/mi-empresa')) ?>" class="block px-4 py-2.5 text-sm text-gris-oscuro hover:bg-gris-claro hover:text-naranja transition">Mi empresa</a>
+                <a href="<?= e(u('/mi-organizacion')) ?>" class="block px-4 py-2.5 text-sm text-gris-oscuro hover:bg-gris-claro hover:text-naranja transition">Mi organización</a>
               <?php endif; ?>
               <?php if (!$has_prof && !$has_comp && !in_array($current_user['role'], ['admin','author'], true)): ?>
                 <a href="<?= e(u($my_area_url)) ?>" class="block px-4 py-2.5 text-sm text-gris-oscuro hover:bg-gris-claro hover:text-naranja transition">Mi cuenta</a>
@@ -123,7 +123,7 @@ $c = $page_active;
                 <a href="<?= e(u('/admin/')) ?>" class="block px-4 py-2.5 text-sm text-gris-oscuro hover:bg-gris-claro hover:text-naranja transition">Panel admin</a>
               <?php endif; ?>
               <?php if (!$has_comp && !in_array($current_user['role'], ['admin','author'], true)): ?>
-                <a href="<?= e(u('/crear-empresa')) ?>" class="block px-4 py-2.5 text-xs text-azul hover:bg-blue-50 transition border-t border-gray-100">+ Crear perfil de empresa</a>
+                <a href="<?= e(u('/crear-organizacion')) ?>" class="block px-4 py-2.5 text-xs text-azul hover:bg-blue-50 transition border-t border-gray-100">+ Crear perfil de organización</a>
               <?php endif; ?>
               <?php if (!$has_prof && !in_array($current_user['role'], ['admin','author'], true)): ?>
                 <a href="<?= e(u('/crear-perfil')) ?>" class="block px-4 py-2.5 text-xs text-azul hover:bg-blue-50 transition <?= !$has_comp ? '' : 'border-t border-gray-100' ?>">+ Crear perfil profesional</a>
@@ -152,7 +152,7 @@ $c = $page_active;
       <?= m_nav_link(u('/clipping'), 'Clipping de Noticias', 'clipping.php', $c) ?>
       <?= m_nav_link(u('/aportar'), 'Aportar contenido', 'aportar.php', $c) ?>
       <div class="border-t border-gray-100 pt-2 mt-2">
-        <?= m_nav_link(u('/red'), 'Red de Profesionales', 'red.php', $c) ?>
+        <?= m_nav_link(u('/red'), 'Red Vértice Pro', 'red.php', $c) ?>
         <?= m_nav_link(u('/bolsa'), 'Bolsa de Trabajo', 'bolsa.php', $c) ?>
         <?= m_nav_link(u('/eventos'), 'Eventos', 'eventos.php', $c) ?>
       </div>
@@ -164,7 +164,7 @@ $c = $page_active;
         <?php else: ?>
           <a href="<?= e(u('/login')) ?>" class="block text-center border border-gray-300 text-gris-oscuro font-semibold px-4 py-2 rounded hover:bg-gris-claro transition">Iniciar sesión</a>
           <a href="<?= e(u('/registro')) ?>" class="block text-center bg-naranja text-white font-semibold px-4 py-2 rounded hover:bg-orange-600 transition">Únete a la red</a>
-          <a href="<?= e(u('/registro-empresa')) ?>" class="block text-center border border-naranja text-naranja font-semibold px-4 py-2 rounded hover:bg-orange-50 transition">Registra tu empresa</a>
+          <a href="<?= e(u('/registro-organizacion')) ?>" class="block text-center border border-naranja text-naranja font-semibold px-4 py-2 rounded hover:bg-orange-50 transition">Registra tu organización</a>
         <?php endif; ?>
       </div>
     </div>

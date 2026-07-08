@@ -20,7 +20,7 @@ include __DIR__ . '/../_layout.php';
   </div>
 <?php if ($tab === 'ofertas'): ?>
 <table>
-  <thead><tr><th>Título</th><th>Empresa</th><th>Modalidad</th><th>Estado</th><th></th></tr></thead>
+  <thead><tr><th>Título</th><th>Organización</th><th>Modalidad</th><th>Estado</th><th></th></tr></thead>
   <tbody>
     <?php foreach ($offers as $o): ?>
     <tr>

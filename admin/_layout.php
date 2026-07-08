@@ -18,7 +18,7 @@ $page_title = $page_title ?? 'Admin — Vértice Pro';
       <a href="<?= e(u('/admin/')) ?>">Dashboard</a>
       <a href="<?= e(u('/admin/')) ?>articulos/">Artículos</a>
       <a href="<?= e(u('/admin/')) ?>profesionales/">Profesionales</a>
-      <a href="<?= e(u('/admin/')) ?>empresas/">Empresas</a>
+      <a href="<?= e(u('/admin/')) ?>empresas/">Organizaciones</a>
       <a href="<?= e(u('/admin/')) ?>bolsa/">Bolsa</a>
       <a href="<?= e(u('/admin/')) ?>eventos/">Eventos</a>
       <a href="<?= e(u('/admin/')) ?>publicaciones/">Publicaciones</a>

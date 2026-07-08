@@ -28,5 +28,5 @@ function section_color(string $slug): string {
 
 function article_url(array $a): string { return u('/articulo/' . ($a['slug'] ?? '')); }
 function profile_url(array $p): string { return u('/perfil/' . ($p['slug'] ?? '')); }
-function company_url(array $c): string { return u('/empresa/' . ($c['slug'] ?? '')); }
+function company_url(array $c): string { return u('/organizacion/' . ($c['slug'] ?? '')); }
 function section_url(string $slug): string { return u('/seccion/' . $slug); }

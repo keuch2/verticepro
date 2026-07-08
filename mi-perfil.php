@@ -185,7 +185,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 ]);
                 $title = 'Nuevo mensaje de un postulante';
                 $msg   = ($u['name'] ?? 'Un profesional') . ' te respondió sobre su postulación a "' . $row['offer_title'] . '":' . "\n\n" . $body;
-                $link  = u('/mi-empresa?tab=interesados&open=' . $iid);
+                $link  = u('/mi-organizacion?tab=interesados&open=' . $iid);
                 if (!empty($row['company_user_id'])) {
                     Notify::create((int)$row['company_user_id'], 'application_message', $title, $msg, $link, $row['company_email']);
                 } elseif (!empty($row['company_email'])) {
@@ -250,8 +250,8 @@ function tab_link(string $t, string $current, string $label, ?int $count = null)
 <?php if (!$__has_company): ?>
   <div class="max-w-5xl mx-auto px-6 mt-4">
     <div class="bg-azul/10 border border-azul rounded-lg px-4 py-3 flex flex-wrap items-center justify-between gap-3">
-      <p class="text-sm text-texto">¿Tu organización también quiere estar en el directorio? Crea un perfil de empresa vinculado a tu cuenta.</p>
-      <a href="<?= e(u('/crear-empresa')) ?>" class="bg-azul text-white text-sm font-semibold px-4 py-2 rounded hover:bg-blue-700 transition">+ Crear perfil de empresa</a>
+      <p class="text-sm text-texto">¿Tu organización también quiere estar en el directorio? Crea un perfil de organización vinculado a tu cuenta.</p>
+      <a href="<?= e(u('/crear-organizacion')) ?>" class="bg-azul text-white text-sm font-semibold px-4 py-2 rounded hover:bg-blue-700 transition">+ Crear perfil de organización</a>
     </div>
   </div>
 <?php endif; ?>
@@ -365,7 +365,7 @@ function tab_link(string $t, string $current, string $label, ?int $count = null)
     </div>
 
     <div>
-      <label class="block text-sm font-semibold mb-1">Empresa donde trabajo (opcional)</label>
+      <label class="block text-sm font-semibold mb-1">Organización donde trabajo (opcional)</label>
       <?php $allCompanies = DB::all('SELECT id, name FROM companies WHERE status = "active" ORDER BY name'); ?>
       <select name="company_id" class="w-full border border-gray-300 rounded px-3 py-2 bg-white">
         <option value="">— Ninguna —</option>
@@ -373,7 +373,7 @@ function tab_link(string $t, string $current, string $label, ?int $count = null)
           <option value="<?= (int)$ac['id'] ?>" <?= (int)($p['company_id'] ?? 0) === (int)$ac['id'] ? 'selected' : '' ?>><?= e($ac['name']) ?></option>
         <?php endforeach; ?>
       </select>
-      <p class="text-xs text-gris-oscuro mt-1">Si trabajas en una empresa registrada en Vértice Pro, aparecerás en su equipo público.</p>
+      <p class="text-xs text-gris-oscuro mt-1">Si trabajas en una organización registrada en Vértice Pro, aparecerás en su equipo público.</p>
     </div>
 
     <div>
@@ -455,7 +455,7 @@ function tab_link(string $t, string $current, string $label, ?int $count = null)
         <button type="button" class="absolute top-2 right-2 text-xs text-coral hover:underline" onclick="this.parentElement.remove()">Eliminar</button>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
           <div><label class="block text-xs font-semibold mb-1">Cargo</label><input name="experiencia[<?= $i ?>][job_title]" value="<?= e($r['job_title'] ?? '') ?>" class="w-full border border-gray-300 rounded px-3 py-2" /></div>
-          <div><label class="block text-xs font-semibold mb-1">Empresa</label><input name="experiencia[<?= $i ?>][company]" value="<?= e($r['company'] ?? '') ?>" class="w-full border border-gray-300 rounded px-3 py-2" /></div>
+          <div><label class="block text-xs font-semibold mb-1">Organización</label><input name="experiencia[<?= $i ?>][company]" value="<?= e($r['company'] ?? '') ?>" class="w-full border border-gray-300 rounded px-3 py-2" /></div>
           <div><label class="block text-xs font-semibold mb-1">Desde</label><input name="experiencia[<?= $i ?>][date_from]" value="<?= e($r['date_from'] ?? '') ?>" placeholder="2020" class="w-full border border-gray-300 rounded px-3 py-2" /></div>
           <div><label class="block text-xs font-semibold mb-1">Hasta</label><input name="experiencia[<?= $i ?>][date_to]" value="<?= e($r['date_to'] ?? '') ?>" placeholder="Presente" class="w-full border border-gray-300 rounded px-3 py-2" /></div>
         </div>
@@ -508,7 +508,7 @@ function tab_link(string $t, string $current, string $label, ?int $count = null)
       <div class="mt-3"><a href="<?= e(u('/bolsa')) ?>" class="text-azul hover:underline font-semibold">Explorar la Bolsa de Trabajo →</a></div>
     </div>
   <?php else: ?>
-    <p class="text-sm text-gris-oscuro mb-4">Cuando marcaste interés en una oferta, la empresa que la publicó recibió tus datos de contacto. Aquí podés ver el estado actual de cada postulación y conversar con la empresa.</p>
+    <p class="text-sm text-gris-oscuro mb-4">Cuando marcaste interés en una oferta, la organización que la publicó recibió tus datos de contacto. Aquí podés ver el estado actual de cada postulación y conversar con la organización.</p>
     <ul class="space-y-3">
       <?php foreach ($intereses as $i):
         $st = $i['status'] ?? 'received';
@@ -523,7 +523,7 @@ function tab_link(string $t, string $current, string $label, ?int $count = null)
             <div class="flex-1 min-w-[200px]">
               <h3 class="font-bold text-texto"><?= e($i['title']) ?></h3>
               <p class="text-xs text-gris-oscuro mt-0.5">
-                <a href="<?= e(u('/empresa/' . $i['company_slug'])) ?>" class="text-azul hover:underline"><?= e($i['company_name']) ?></a>
+                <a href="<?= e(u('/organizacion/' . $i['company_slug'])) ?>" class="text-azul hover:underline"><?= e($i['company_name']) ?></a>
                 · <?= e($i['modality'] ?? '') ?>
                 <?= !empty($i['category']) ? ' · ' . e($i['category']) : '' ?>
                 · marcado <?= e(format_date($i['created_at'])) ?>
@@ -561,13 +561,13 @@ function tab_link(string $t, string $current, string $label, ?int $count = null)
                   <?php endforeach; ?>
                 </ul>
               <?php else: ?>
-                <p class="text-sm text-gris-oscuro mb-3">Sin mensajes todavía. Si la empresa te escribe, lo vas a ver aquí.</p>
+                <p class="text-sm text-gris-oscuro mb-3">Sin mensajes todavía. Si la organización te escribe, lo vas a ver aquí.</p>
               <?php endif; ?>
               <form method="post" class="flex flex-col gap-2">
                 <input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>" />
                 <input type="hidden" name="action" value="send_application_message" />
                 <input type="hidden" name="interest_id" value="<?= (int)$i['id'] ?>" />
-                <textarea name="message" rows="2" required placeholder="Escribí un mensaje a la empresa…" class="w-full border border-gray-300 rounded px-3 py-2 text-sm"></textarea>
+                <textarea name="message" rows="2" required placeholder="Escribí un mensaje a la organización…" class="w-full border border-gray-300 rounded px-3 py-2 text-sm"></textarea>
                 <div class="text-right">
                   <button class="bg-naranja text-white text-sm font-semibold px-4 py-2 rounded hover:bg-orange-600" type="submit">Enviar mensaje</button>
                 </div>

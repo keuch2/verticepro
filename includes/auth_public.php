@@ -25,7 +25,7 @@ function require_professional(): array {
     if (!$prof) {
         // No tiene perfil profesional: redirige a la empresa o a inicio.
         $hasComp = DB::one('SELECT id FROM companies WHERE user_id = ? LIMIT 1', [(int)$u['id']]);
-        redirect($hasComp ? '/mi-empresa' : '/');
+        redirect($hasComp ? '/mi-organizacion' : '/');
     }
     return $u;
 }

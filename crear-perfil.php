@@ -203,7 +203,7 @@ include __DIR__ . '/includes/header.php';
 
       <div class="flex gap-3">
         <button class="bg-naranja text-white font-semibold px-6 py-2.5 rounded hover:bg-orange-600 transition" type="submit">Enviar para revisión</button>
-        <a href="<?= e(u('/mi-empresa')) ?>" class="text-gris-oscuro hover:text-naranja text-sm py-2.5">Cancelar</a>
+        <a href="<?= e(u('/mi-organizacion')) ?>" class="text-gris-oscuro hover:text-naranja text-sm py-2.5">Cancelar</a>
       </div>
     </form>
   <?php endif; ?>

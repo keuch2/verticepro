@@ -14,7 +14,7 @@ include __DIR__ . '/includes/header.php';
     <p>Vértice Pro es una plataforma editorial y red profesional para especialistas en calidad, seguridad, salud ocupacional, ergonomía, legislación y medio ambiente, con foco principal en Paraguay.</p>
 
     <h2 class="text-xl font-bold mt-8 mb-3">3. Registro y contenidos del usuario</h2>
-    <p>El registro como profesional o empresa requiere información veraz y actualizada. Vértice Pro revisa cada solicitud antes de publicar el perfil. El usuario es responsable de los contenidos que aporta y de mantener su información al día.</p>
+    <p>El registro como profesional o organización requiere información veraz y actualizada. Vértice Pro revisa cada solicitud antes de publicar el perfil. El usuario es responsable de los contenidos que aporta y de mantener su información al día.</p>
 
     <h2 class="text-xl font-bold mt-8 mb-3">4. Bolsa de Trabajo y aportes</h2>
     <p>Los oferentes pueden publicar ofertas de empleo y servicios profesionales, inicialmente sin costo. Los aportes de archivos por parte de suscriptores quedan sujetos a revisión previa por parte del equipo de Vértice Pro.</p>

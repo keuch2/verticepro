@@ -96,7 +96,7 @@ include __DIR__ . '/includes/header.php';
           </div>
           <div class="bg-azul rounded-lg p-5 text-white text-center">
             <p class="font-bold text-sm">¿Eres experto en <?= e($article['section_name'] ?? 'este tema') ?>?</p>
-            <p class="text-blue-200 text-xs mt-1 mb-3">Únete a la Red de Profesionales</p>
+            <p class="text-blue-200 text-xs mt-1 mb-3">Únete a la Red Vértice Pro</p>
             <a href="<?= e(u('/red')) ?>" class="block bg-white text-azul font-bold text-xs py-2 rounded hover:bg-blue-50 transition">Ver la Red →</a>
           </div>
         </div>

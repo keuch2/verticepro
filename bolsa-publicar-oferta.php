@@ -15,7 +15,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     csrf_check();
     foreach ($old as $k => $_) $old[$k] = trim($_POST[$k] ?? '');
 
-    if ($old['company_email'] === '' || !filter_var($old['company_email'], FILTER_VALIDATE_EMAIL)) $errors['company_email'] = 'Indica el email registrado de la empresa.';
+    if ($old['company_email'] === '' || !filter_var($old['company_email'], FILTER_VALIDATE_EMAIL)) $errors['company_email'] = 'Indica el email registrado de la organización.';
     if ($old['title'] === '')                                  $errors['title'] = 'Indica un título.';
     if ($old['description'] === '')                            $errors['description'] = 'Describe la oferta.';
     if ($old['modality'] === '')                               $errors['modality'] = 'Selecciona modalidad.';
@@ -24,9 +24,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!isset($errors['company_email'])) {
         $company = DB::one('SELECT id, name, status FROM companies WHERE email = ? LIMIT 1', [$old['company_email']]);
         if (!$company) {
-            $errors['company_email'] = 'No encontramos una empresa registrada con ese email. Regístrala primero.';
+            $errors['company_email'] = 'No encontramos una organización registrada con ese email. Regístrala primero.';
         } elseif ($company['status'] !== 'active') {
-            $errors['company_email'] = 'La empresa todavía no está aprobada. Espera la confirmación de Vértice Pro.';
+            $errors['company_email'] = 'La organización todavía no está aprobada. Espera la confirmación de Vértice Pro.';
         }
     }
 
@@ -90,9 +90,9 @@ include __DIR__ . '/includes/header.php';
       <input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>" />
 
       <div>
-        <label class="block text-sm font-semibold mb-1">Email de la empresa registrada <span class="text-coral">*</span></label>
+        <label class="block text-sm font-semibold mb-1">Email de la organización registrada <span class="text-coral">*</span></label>
         <input name="company_email" type="email" required value="<?= e($old['company_email']) ?>" class="w-full border <?= isset($errors['company_email'])?'border-coral':'border-gray-300' ?> rounded px-3 py-2" />
-        <p class="text-xs text-gris-oscuro mt-1">Usamos este email para identificar la empresa. ¿Aún no la registraste? <a href="<?= e(u('/registro-empresa')) ?>" class="text-azul hover:underline">Registra tu empresa</a> primero.</p>
+        <p class="text-xs text-gris-oscuro mt-1">Usamos este email para identificar la organización. ¿Aún no la registraste? <a href="<?= e(u('/registro-organizacion')) ?>" class="text-azul hover:underline">Registra tu organización</a> primero.</p>
       </div>
 
       <div>
@@ -178,7 +178,7 @@ include __DIR__ . '/includes/header.php';
       <div>
         <label class="block text-sm font-semibold mb-1">Flyer / imagen de la oferta (opcional)</label>
         <input name="flyer" type="file" accept="image/*" class="w-full border border-gray-300 rounded px-3 py-2 text-sm" />
-        <p class="text-xs text-gris-oscuro mt-1">Se mostrará junto a la oferta en la Bolsa de Trabajo y en el perfil de tu empresa. Recomendado: JPG/PNG/WebP, máx 8 MB.</p>
+        <p class="text-xs text-gris-oscuro mt-1">Se mostrará junto a la oferta en la Bolsa de Trabajo y en el perfil de tu organización. Recomendado: JPG/PNG/WebP, máx 8 MB.</p>
       </div>
 
       <button type="submit" class="bg-naranja text-white font-semibold px-6 py-2.5 rounded hover:bg-orange-600 transition">Enviar para revisión</button>

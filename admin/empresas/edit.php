@@ -28,8 +28,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     $prev_status = $c['status'] ?? null;
-    if ($is_new) { $id = DB::insert('companies', $data); flash('ok','Empresa creada'); }
-    else         { DB::update('companies', $data, ['id'=>$id]); flash('ok','Empresa actualizada'); }
+    if ($is_new) { $id = DB::insert('companies', $data); flash('ok','Organización creada'); }
+    else         { DB::update('companies', $data, ['id'=>$id]); flash('ok','Organización actualizada'); }
 
     // Aprobación: activar también el users vinculado + notificar a la empresa
     if (!$is_new && $prev_status === 'pending' && $data['status'] === 'active') {
@@ -38,9 +38,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (!empty($fresh['user_id'])) {
                 DB::update('users', ['status' => 'active'], ['id' => (int)$fresh['user_id']]);
             }
-            $link = u('/mi-empresa');
-            $title = '¡Tu empresa fue aprobada en Vértice Pro!';
-            $body  = "Buenas noticias. La empresa " . $fresh['name'] . " acaba de ser aprobada y ya es visible en el directorio de empresas. Ya puedes iniciar sesión con tu email y contraseña para editar el perfil de la empresa y publicar ofertas.";
+            $link = u('/mi-organizacion');
+            $title = '¡Tu organización fue aprobada en Vértice Pro!';
+            $body  = "Buenas noticias. La organización " . $fresh['name'] . " acaba de ser aprobada y ya es visible en el directorio de organizaciones. Ya puedes iniciar sesión con tu email y contraseña para editar el perfil de la organización y publicar ofertas.";
             if (!empty($fresh['user_id'])) {
                 Notify::create((int)$fresh['user_id'], 'profile_approved', $title, $body, $link, $fresh['email']);
             } else {
@@ -53,7 +53,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 if (isset($_GET['delete']) && $id) { csrf_check(); DB::delete('companies',['id'=>$id]); flash('ok','Eliminada'); redirect('/admin/empresas/'); }
 
-$page_title = $is_new?'Nueva empresa':'Editar empresa';
+$page_title = $is_new?'Nueva organización':'Editar organización';
 include __DIR__ . '/../_layout.php';
 ?>
 <div class="toolbar">

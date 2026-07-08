@@ -20,7 +20,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST') {
         'published_at' => post('published_at') ?: null,
         'status' => post('status','draft'),
     ];
-    if (!$data['title'] || !$data['company_id']) { flash('err','Título y empresa requeridos'); redirect('/admin/bolsa/edit_oferta.php'.($id?"?id=$id":'')); }
+    if (!$data['title'] || !$data['company_id']) { flash('err','Título y organización requeridos'); redirect('/admin/bolsa/edit_oferta.php'.($id?"?id=$id":'')); }
 
     if (!empty($_FILES['flyer']['name'])) {
         $rel = upload_image($_FILES['flyer'], 'flyers', $data['slug']);
@@ -48,7 +48,7 @@ include __DIR__ . '/../_layout.php';
   <div class="form-grid">
     <div><label>Título</label><input name="title" required value="<?= e($o['title']??'') ?>" /></div>
     <div class="form-grid cols-2">
-      <div><label>Empresa</label><select name="company_id" required><option value="">—</option><?= opts(DB::all('SELECT id,name FROM companies ORDER BY name'),'id','name',$o['company_id']??null) ?></select></div>
+      <div><label>Organización</label><select name="company_id" required><option value="">—</option><?= opts(DB::all('SELECT id,name FROM companies ORDER BY name'),'id','name',$o['company_id']??null) ?></select></div>
       <div><label>Slug</label><input name="slug" value="<?= e($o['slug']??'') ?>" /></div>
     </div>
     <div><label>Descripción</label><textarea name="description" rows="6"><?= e($o['description']??'') ?></textarea></div>

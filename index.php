@@ -61,7 +61,7 @@ include __DIR__ . '/includes/header.php';
     <section class="bg-gris-claro py-14">
       <div class="max-w-7xl mx-auto px-6">
         <div class="flex justify-between items-baseline mb-8">
-          <h2 class="text-2xl font-extrabold text-texto">Red de Profesionales</h2>
+          <h2 class="text-2xl font-extrabold text-texto">Red Vértice Pro</h2>
           <a href="<?= e(u('/directorio')) ?>" class="text-sm text-naranja font-semibold hover:underline">Ver directorio →</a>
         </div>
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">

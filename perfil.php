@@ -131,10 +131,10 @@ include __DIR__ . '/includes/header.php';
       <?php if (!empty($p['company_id'])): $emp = CompanyRepo::find((int)$p['company_id']); ?>
         <?php if ($emp && $emp['status'] === 'active'): ?>
           <div class="bg-white rounded-lg border border-gray-200 p-6">
-            <h3 class="font-bold mb-3">Empresa</h3>
-            <a href="<?= e(u('/empresa/' . $emp['slug'])) ?>" class="block">
+            <h3 class="font-bold mb-3">Organización</h3>
+            <a href="<?= e(u('/organizacion/' . $emp['slug'])) ?>" class="block">
               <p class="font-semibold text-texto"><?= e($emp['name']) ?></p>
-              <p class="text-sm text-azul hover:underline">Ver perfil de la empresa →</p>
+              <p class="text-sm text-azul hover:underline">Ver perfil de la organización →</p>
             </a>
           </div>
         <?php endif; ?>

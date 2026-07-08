@@ -39,7 +39,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!$old['accept_terms'])                                $errors['accept_terms'] = 'Debes aceptar los términos y condiciones para continuar.';
     if (strlen($old['password']) < 8)                         $errors['password'] = 'La contraseña debe tener al menos 8 caracteres.';
     elseif ($old['password'] !== $old['password_confirm'])    $errors['password'] = 'Las contraseñas no coinciden.';
-    if ($old['name'] === '')                                  $errors['name'] = 'Indícanos el nombre de la empresa.';
+    if ($old['name'] === '')                                  $errors['name'] = 'Indícanos el nombre de la organización.';
     if ($old['email'] === '' || !filter_var($old['email'], FILTER_VALIDATE_EMAIL)) $errors['email'] = 'Necesitamos un email válido para contactarte.';
     if (empty($old['sectors']))                                $errors['sectors'] = 'Selecciona al menos un sector.';
     if ($old['country_id'] === '')                            $errors['country_id'] = 'Selecciona un país.';
@@ -55,7 +55,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($exists) {
             $errors['email'] = $exists['status'] === 'pending'
                 ? 'Ya tenemos una solicitud pendiente con este email. La estamos revisando.'
-                : 'Este email ya está registrado para otra empresa. Si es tu cuenta, inicia sesión o recupera tu contraseña.';
+                : 'Este email ya está registrado para otra organización. Si es tu cuenta, inicia sesión o recupera tu contraseña.';
         } elseif (DB::one('SELECT id FROM users WHERE email = ? LIMIT 1', [$old['email']])) {
             $errors['email'] = 'Este email ya tiene una cuenta. Inicia sesión o recupera tu contraseña.';
         }
@@ -129,16 +129,16 @@ $cities      = SectionRepo::cities();
 $default_country_id = (int)(DB::one("SELECT id FROM countries WHERE slug = 'paraguay'")['id'] ?? 0);
 $selected_country = $old['country_id'] !== '' ? (int)$old['country_id'] : $default_country_id;
 
-$page_title = 'Registra tu empresa — Vértice Pro';
-$page_active = 'registro-empresa.php';
-$page_description = 'Crea el perfil público de tu empresa en Vértice Pro y conecta con profesionales y oportunidades en Paraguay.';
+$page_title = 'Registra tu organización — Vértice Pro';
+$page_active = 'registro-organizacion.php';
+$page_description = 'Crea el perfil público de tu organización en Vértice Pro y conecta con profesionales y oportunidades en Paraguay.';
 include __DIR__ . '/includes/header.php';
 ?>
   <section class="relative px-6 py-14" style="background: linear-gradient(135deg, rgba(245,130,32,0.92), rgba(180,80,10,0.85)); color:#fff;">
     <div class="max-w-4xl mx-auto">
-      <p class="uppercase tracking-wide text-xs font-bold opacity-80">Empresas</p>
-      <h1 class="text-4xl font-extrabold mt-2">Registra tu empresa</h1>
-      <p class="text-lg mt-3 opacity-90 max-w-2xl">Suma tu empresa al directorio de Vértice Pro. Conecta con profesionales del sector y publica ofertas en la Bolsa de Trabajo.</p>
+      <p class="uppercase tracking-wide text-xs font-bold opacity-80">Organizaciones</p>
+      <h1 class="text-4xl font-extrabold mt-2">Registra tu organización</h1>
+      <p class="text-lg mt-3 opacity-90 max-w-2xl">Suma tu organización al directorio de Vértice Pro. Conecta con profesionales del sector y publica ofertas en la Bolsa de Trabajo.</p>
       <ul class="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-6 text-sm">
         <li class="bg-white/10 rounded px-4 py-2">✓ Perfil público verificable</li>
         <li class="bg-white/10 rounded px-4 py-2">✓ Visibilidad ante profesionales</li>
@@ -151,16 +151,16 @@ include __DIR__ . '/includes/header.php';
     <?php if ($submitted_ok): ?>
       <div class="bg-verde/10 border border-verde rounded-lg p-6 text-texto">
         <h2 class="text-xl font-extrabold text-verde">¡Solicitud recibida!</h2>
-        <p class="mt-2 text-gris-oscuro">Gracias por sumar tu empresa a Vértice Pro. Tu solicitud quedó <strong>pendiente de aprobación</strong>: nuestro equipo la revisará en las próximas 24–48 horas y te avisaremos por email cuando esté publicada.</p>
+        <p class="mt-2 text-gris-oscuro">Gracias por sumar tu organización a Vértice Pro. Tu solicitud quedó <strong>pendiente de aprobación</strong>: nuestro equipo la revisará en las próximas 24–48 horas y te avisaremos por email cuando esté publicada.</p>
         <div class="mt-5 flex flex-wrap gap-3">
-          <a href="<?= e(u('/empresas')) ?>" class="bg-azul text-white font-semibold px-5 py-2 rounded hover:bg-blue-700 transition">Ver el directorio</a>
+          <a href="<?= e(u('/organizaciones')) ?>" class="bg-azul text-white font-semibold px-5 py-2 rounded hover:bg-blue-700 transition">Ver el directorio</a>
           <a href="<?= e(u('/')) ?>" class="border border-gris-oscuro text-gris-oscuro font-semibold px-5 py-2 rounded hover:bg-gris-claro transition">Volver al inicio</a>
         </div>
       </div>
     <?php else: ?>
       <div class="mb-8">
-        <h2 class="text-2xl font-extrabold">Registro de empresa</h2>
-        <p class="text-gris-oscuro mt-1">Completa el formulario. Todas las empresas pasan por una revisión antes de aparecer en el directorio público.</p>
+        <h2 class="text-2xl font-extrabold">Registro de organización</h2>
+        <p class="text-gris-oscuro mt-1">Completa el formulario. Todas las organizaciones pasan por una revisión antes de aparecer en el directorio público.</p>
       </div>
 
       <?php if ($errors): ?>
@@ -177,7 +177,7 @@ include __DIR__ . '/includes/header.php';
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
           <div>
-            <label class="block text-sm font-semibold mb-1">Nombre de la empresa <span class="text-coral">*</span></label>
+            <label class="block text-sm font-semibold mb-1">Nombre de la organización <span class="text-coral">*</span></label>
             <input name="name" required value="<?= e($old['name']) ?>" class="w-full border <?= isset($errors['name'])?'border-coral':'border-gray-300' ?> rounded px-3 py-2 focus:border-naranja focus:ring-1 focus:ring-naranja outline-none" />
           </div>
           <div>
@@ -190,7 +190,7 @@ include __DIR__ . '/includes/header.php';
           <div>
             <label class="block text-sm font-semibold mb-1">Contraseña <span class="text-coral">*</span></label>
             <input name="password" type="password" required minlength="8" class="w-full border <?= isset($errors['password'])?'border-coral':'border-gray-300' ?> rounded px-3 py-2 focus:border-naranja focus:ring-1 focus:ring-naranja outline-none" />
-            <p class="text-xs text-gris-oscuro mt-1">Mínimo 8 caracteres. La usarás para editar el perfil de tu empresa.</p>
+            <p class="text-xs text-gris-oscuro mt-1">Mínimo 8 caracteres. La usarás para editar el perfil de tu organización.</p>
           </div>
           <div>
             <label class="block text-sm font-semibold mb-1">Confirmar contraseña <span class="text-coral">*</span></label>
@@ -221,7 +221,7 @@ include __DIR__ . '/includes/header.php';
               </label>
             <?php endforeach; ?>
           </div>
-          <p class="text-xs text-gris-oscuro mt-1">Marca todos los servicios que tu empresa puede prestar.</p>
+          <p class="text-xs text-gris-oscuro mt-1">Marca todos los servicios que tu organización puede prestar.</p>
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
@@ -255,7 +255,7 @@ include __DIR__ . '/includes/header.php';
 
         <div>
           <label class="block text-sm font-semibold mb-1">Descripción</label>
-          <textarea name="description" rows="5" maxlength="2000" placeholder="Cuéntanos sobre la empresa, servicios, sectores de cliente…" class="w-full border <?= isset($errors['description'])?'border-coral':'border-gray-300' ?> rounded px-3 py-2 focus:border-naranja focus:ring-1 focus:ring-naranja outline-none"><?= e($old['description']) ?></textarea>
+          <textarea name="description" rows="5" maxlength="2000" placeholder="Cuéntanos sobre la organización, servicios, sectores de cliente…" class="w-full border <?= isset($errors['description'])?'border-coral':'border-gray-300' ?> rounded px-3 py-2 focus:border-naranja focus:ring-1 focus:ring-naranja outline-none"><?= e($old['description']) ?></textarea>
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
@@ -298,7 +298,7 @@ include __DIR__ . '/includes/header.php';
 
         <div class="flex flex-wrap items-center gap-3 pt-2">
           <button type="submit" class="bg-naranja text-white font-semibold px-6 py-2.5 rounded hover:bg-orange-600 transition">Enviar solicitud</button>
-          <a href="<?= e(u('/empresas')) ?>" class="text-gris-oscuro hover:text-naranja transition text-sm">Cancelar</a>
+          <a href="<?= e(u('/organizaciones')) ?>" class="text-gris-oscuro hover:text-naranja transition text-sm">Cancelar</a>
         </div>
       </form>
 

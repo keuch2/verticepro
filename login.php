@@ -8,7 +8,7 @@ if (session_status() !== PHP_SESSION_ACTIVE) session_start();
 $u = auth_user();
 if ($u) {
     if ($u['role'] === 'professional') redirect('/mi-perfil');
-    if ($u['role'] === 'company')      redirect('/mi-empresa');
+    if ($u['role'] === 'company')      redirect('/mi-organizacion');
     if (in_array($u['role'], ['admin','author'], true)) redirect('/admin/');
 }
 
@@ -33,7 +33,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 redirect($back);
             }
             if ($user['role'] === 'professional')          redirect('/mi-perfil');
-            elseif ($user['role'] === 'company')           redirect('/mi-empresa');
+            elseif ($user['role'] === 'company')           redirect('/mi-organizacion');
             elseif (in_array($user['role'], ['admin','author'], true)) redirect('/admin/');
             else                                            redirect('/');
         }
@@ -46,7 +46,7 @@ include __DIR__ . '/includes/header.php';
 ?>
 <section class="max-w-md mx-auto px-6 py-16">
   <h1 class="text-3xl font-extrabold">Iniciar sesión</h1>
-  <p class="text-gris-oscuro mt-2">Accede a tu cuenta para editar tu perfil profesional o de empresa.</p>
+  <p class="text-gris-oscuro mt-2">Accede a tu cuenta para editar tu perfil profesional o de organización.</p>
 
   <?php if ($errors): ?>
     <div class="bg-red-50 border border-coral text-coral rounded p-4 mt-6 text-sm">
@@ -72,7 +72,7 @@ include __DIR__ . '/includes/header.php';
   </form>
 
   <p class="text-xs text-gris-oscuro text-center mt-4">
-    ¿Eres empresa? <a href="<?= e(u('/registro-empresa')) ?>" class="text-azul hover:underline">Regístrate aquí</a>.
+    ¿Eres organización? <a href="<?= e(u('/registro-organizacion')) ?>" class="text-azul hover:underline">Regístrate aquí</a>.
   </p>
 </section>
 <?php include __DIR__ . '/includes/footer.php'; ?>

@@ -41,11 +41,11 @@
         </ul>
       </div>
       <div>
-        <h4 class="font-bold text-base mb-4">Red de Profesionales</h4>
+        <h4 class="font-bold text-base mb-4">Red Vértice Pro</h4>
         <ul class="space-y-2 text-gray-300 text-sm">
-          <li><a href="<?= e(u('/red')) ?>" class="hover:text-naranja transition">Red de Profesionales</a></li>
+          <li><a href="<?= e(u('/red')) ?>" class="hover:text-naranja transition">Red Vértice Pro</a></li>
           <li><a href="<?= e(u('/directorio')) ?>" class="hover:text-naranja transition">Directorio</a></li>
-          <li><a href="<?= e(u('/empresas')) ?>" class="hover:text-naranja transition">Empresas</a></li>
+          <li><a href="<?= e(u('/organizaciones')) ?>" class="hover:text-naranja transition">Organizaciones</a></li>
           <li><a href="<?= e(u('/bolsa')) ?>" class="hover:text-naranja transition">Bolsa de Trabajo</a></li>
         </ul>
       </div>

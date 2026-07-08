@@ -6,17 +6,17 @@ $companyServices = SectionRepo::companyServices();
 $countries = SectionRepo::countries();
 $departments = SectionRepo::departments();
 $cities = SectionRepo::cities();
-$page_title = 'Empresas — Vértice Pro'; $page_active = 'empresas.php';
+$page_title = 'Organizaciones — Vértice Pro'; $page_active = 'organizaciones.php';
 include __DIR__ . '/includes/header.php';
 ?>
   <section class="bg-gris-claro py-12 px-6">
     <div class="max-w-7xl mx-auto">
       <div class="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 class="text-3xl font-extrabold">Empresas</h1>
+          <h1 class="text-3xl font-extrabold">Organizaciones</h1>
           <p class="text-gris-oscuro mt-2">Consultoras, auditoras y proveedores del sector en Paraguay.</p>
         </div>
-        <a href="<?= e(u('/registro-empresa')) ?>" class="bg-naranja text-white font-semibold px-5 py-2.5 rounded hover:bg-orange-600 transition">Registra tu empresa</a>
+        <a href="<?= e(u('/registro-organizacion')) ?>" class="bg-naranja text-white font-semibold px-5 py-2.5 rounded hover:bg-orange-600 transition">Registra tu organización</a>
       </div>
     </div>
   </section>
@@ -87,7 +87,7 @@ include __DIR__ . '/includes/header.php';
             <span><?= $offers ?> oferta<?= $offers === 1 ? '' : 's' ?></span>
           </div>
           <div class="mt-3 pt-3 border-t border-gray-100">
-            <a href="<?= e(u('/empresa/' . $c['slug'])) ?>" class="text-sm text-naranja font-semibold hover:underline">Ver perfil →</a>
+            <a href="<?= e(u('/organizacion/' . $c['slug'])) ?>" class="text-sm text-naranja font-semibold hover:underline">Ver perfil →</a>
           </div>
         </article>
       <?php endforeach; ?>
