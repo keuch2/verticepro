@@ -14,6 +14,17 @@ $old = [
 ];
 $submitted_ok = false;
 
+// Datos de referencia: se cargan antes del handler POST para poder validar
+// server-side que city_id / type_id / discipline_id existan (whitelist).
+$cities      = SectionRepo::cities();
+$countries   = SectionRepo::countries();
+$departments = SectionRepo::departments();
+$types       = SectionRepo::profTypes();
+$disciplines = SectionRepo::disciplines();
+$valid_city_ids       = array_map(fn($r) => (int)$r['id'], $cities);
+$valid_type_ids       = array_map(fn($r) => (int)$r['id'], $types);
+$valid_discipline_ids = array_map(fn($r) => (int)$r['id'], $disciplines);
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     csrf_check();
 
@@ -43,10 +54,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($old['name'] === '')                                  $errors['name']  = 'Indícanos tu nombre completo.';
     if ($old['email'] === '' || !filter_var($old['email'], FILTER_VALIDATE_EMAIL)) $errors['email'] = 'Necesitamos un email válido para contactarte.';
     if ($old['title'] === '')                                 $errors['title'] = 'Indica tu título o cargo profesional.';
+    elseif (mb_strlen($old['title']) > 200)                   $errors['title'] = 'El título no puede superar los 200 caracteres.';
+    if (mb_strlen($old['name']) > 150)                        $errors['name']  = 'El nombre no puede superar los 150 caracteres.';
     if (empty($old['disciplines']))                           $errors['disciplines'] = 'Selecciona al menos una disciplina.';
     if ($old['bio'] !== '' && mb_strlen($old['bio']) > 2000)  $errors['bio'] = 'La bio no puede superar los 2000 caracteres.';
     if ($old['linkedin'] !== '' && !preg_match('#^https?://#i', $old['linkedin'])) $errors['linkedin'] = 'Debe empezar con http(s)://';
     if ($old['website']  !== '' && !preg_match('#^https?://#i', $old['website']))  $errors['website']  = 'Debe empezar con http(s)://';
+
+    // Validar server-side que las FK existan (whitelist contra las opciones cargadas).
+    // Evita que un id manipulado/desincronizado rompa el INSERT y deje un user huérfano.
+    if ($old['city_id'] !== '' && !in_array((int)$old['city_id'], $valid_city_ids, true)) {
+        $errors['city_id'] = 'La ciudad seleccionada no es válida.';
+    }
+    $old['types']       = array_values(array_intersect($old['types'], $valid_type_ids));
+    $old['disciplines'] = array_values(array_intersect($old['disciplines'], $valid_discipline_ids));
+    if (!empty($_POST['disciplines']) && empty($old['disciplines'])) {
+        $errors['disciplines'] = 'Las disciplinas seleccionadas no son válidas.';
+    }
 
     // Prevent duplicate registrations by email (already pending or active).
     if (!isset($errors['email'])) {
@@ -70,17 +94,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($i > 999) { $slug = $base . '-' . bin2hex(random_bytes(3)); break; }
         }
 
-        // Crear usuario con rol professional (status=pending; se activa al aprobar el perfil).
-        $user_id = DB::insert('users', [
-            'email' => $old['email'],
-            'password_hash' => password_hash($old['password'], PASSWORD_DEFAULT),
-            'role' => 'professional',
-            'name' => $old['name'],
-            'status' => 'pending',
-            'notifications_opt_in' => $old['notifications_opt_in'],
-        ]);
-
-        // Avatar (foto de perfil) — opcional
+        // Avatar (foto de perfil) — opcional. Fuera de la transacción: es I/O de disco.
         $avatar = null;
         if (!empty($_FILES['avatar']['name'])) {
             require_once __DIR__ . '/includes/image.php';
@@ -91,44 +105,66 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // Primer tipo seleccionado va como cache "primario" en professionals.type_id
         $primary_type = !empty($old['types']) ? (int)$old['types'][0] : null;
 
-        $id = DB::insert('professionals', [
-            'user_id'  => $user_id,
-            'slug'     => $slug,
-            'name'     => $old['name'],
-            'title'    => $old['title'],
-            'bio'      => $old['bio'] ?: null,
-            'city_id'  => $old['city_id'] !== '' ? (int)$old['city_id'] : null,
-            'type_id'  => $primary_type,
-            'avatar_image' => $avatar,
-            'email'    => $old['email'],
-            'linkedin' => $old['linkedin'] ?: null,
-            'website'  => $old['website']  ?: null,
-            'phone'    => $old['phone']    ?: null,
-            'verified' => 0,
-            'available'=> 1,
-            'featured' => 0,
-            'visibility_email'    => $old['visibility_email'],
-            'visibility_linkedin' => $old['visibility_linkedin'],
-            'visibility_website'  => $old['visibility_website'],
-            'visibility_phone'    => $old['visibility_phone'],
-            'notifications_opt_in'=> $old['notifications_opt_in'],
-            'status'   => 'pending',
-        ]);
+        // user + professional + relaciones M:N en UNA transacción: si algo falla,
+        // rollBack completo (nunca queda un user huérfano) y mensaje legible al usuario.
+        try {
+            DB::transaction(function () use ($old, $slug, $avatar, $primary_type) {
+                $user_id = DB::insert('users', [
+                    'email' => $old['email'],
+                    'password_hash' => password_hash($old['password'], PASSWORD_DEFAULT),
+                    'role' => 'professional',
+                    'name' => $old['name'],
+                    'status' => 'pending',
+                    'notifications_opt_in' => $old['notifications_opt_in'],
+                ]);
 
-        // Tipos M:N
-        if (!empty($old['types'])) {
-            ProfessionalRepo::setTypes($id, $old['types']);
-        }
+                $id = DB::insert('professionals', [
+                    'user_id'  => $user_id,
+                    'slug'     => $slug,
+                    'name'     => $old['name'],
+                    'title'    => $old['title'],
+                    'bio'      => $old['bio'] ?: null,
+                    'city_id'  => $old['city_id'] !== '' ? (int)$old['city_id'] : null,
+                    'type_id'  => $primary_type,
+                    'avatar_image' => $avatar,
+                    'email'    => $old['email'],
+                    'linkedin' => $old['linkedin'] ?: null,
+                    'website'  => $old['website']  ?: null,
+                    'phone'    => $old['phone']    ?: null,
+                    'verified' => 0,
+                    'available'=> 1,
+                    'featured' => 0,
+                    'visibility_email'    => $old['visibility_email'],
+                    'visibility_linkedin' => $old['visibility_linkedin'],
+                    'visibility_website'  => $old['visibility_website'],
+                    'visibility_phone'    => $old['visibility_phone'],
+                    'notifications_opt_in'=> $old['notifications_opt_in'],
+                    'status'   => 'pending',
+                ]);
 
-        foreach ($old['disciplines'] as $did) {
-            if ($did > 0) {
-                try { DB::insert('professional_disciplines', ['professional_id' => $id, 'discipline_id' => $did]); } catch (\Throwable $e) {}
-            }
-        }
-        foreach (array_filter(array_map('trim', explode(',', $old['specialties']))) as $s) {
-            try { DB::insert('professional_specialties', ['professional_id' => $id, 'specialty' => $s]); } catch (\Throwable $e) {}
-        }
+                // Tipos M:N (ya validados como whitelist)
+                if (!empty($old['types'])) {
+                    ProfessionalRepo::setTypes($id, $old['types']);
+                }
 
+                // Disciplinas (ya validadas). Cualquier fallo aborta la transacción.
+                foreach ($old['disciplines'] as $did) {
+                    if ($did > 0) {
+                        DB::insert('professional_disciplines', ['professional_id' => $id, 'discipline_id' => $did]);
+                    }
+                }
+                // Especialidades: texto libre; truncar a 100 (VARCHAR) para no romper el INSERT.
+                foreach (array_filter(array_map('trim', explode(',', $old['specialties']))) as $s) {
+                    DB::insert('professional_specialties', ['professional_id' => $id, 'specialty' => mb_substr($s, 0, 100)]);
+                }
+            });
+        } catch (\Throwable $e) {
+            error_log('[registro.php] fallo al crear profesional: ' . $e->getMessage());
+            $errors['general'] = 'No pudimos completar tu registro por un problema técnico. No se creó ninguna cuenta; por favor inténtalo de nuevo.';
+        }
+    }
+
+    if (!$errors) {
         $submitted_ok = true;
         $old = [
             'name'=>'','email'=>'','title'=>'','city_id'=>'','types'=>[],'disciplines'=>[],
@@ -140,11 +176,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-$cities      = SectionRepo::cities();
-$countries   = SectionRepo::countries();
-$departments = SectionRepo::departments();
-$types       = SectionRepo::profTypes();
-$disciplines = SectionRepo::disciplines();
 $default_country_id = (int)(DB::one("SELECT id FROM countries WHERE slug = 'paraguay'")['id'] ?? 0);
 
 $page_title = 'Únete a la Red — Vértice Pro';

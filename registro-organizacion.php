@@ -14,6 +14,17 @@ $old = [
 ];
 $submitted_ok = false;
 
+// Datos de referencia: antes del handler POST para validar FKs server-side (whitelist).
+$sectors     = SectionRepo::sectors();
+$companyServices = SectionRepo::companyServices();
+$countries   = SectionRepo::countries();
+$departments = SectionRepo::departments();
+$cities      = SectionRepo::cities();
+$valid_sector_ids  = array_map(fn($r) => (int)$r['id'], $sectors);
+$valid_service_ids = array_map(fn($r) => (int)$r['id'], $companyServices);
+$valid_country_ids = array_map(fn($r) => (int)$r['id'], $countries);
+$valid_city_ids    = array_map(fn($r) => (int)$r['id'], $cities);
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     csrf_check();
 
@@ -48,6 +59,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($old['founded_year'] !== '' && (!ctype_digit($old['founded_year']) || (int)$old['founded_year'] < 1800 || (int)$old['founded_year'] > (int)date('Y'))) {
         $errors['founded_year'] = 'Año inválido.';
     }
+    if (mb_strlen($old['name']) > 150)                        $errors['name'] = 'El nombre no puede superar los 150 caracteres.';
+
+    // Validar server-side que las FK existan (whitelist). Evita user huérfano por id inválido.
+    if ($old['country_id'] !== '' && !in_array((int)$old['country_id'], $valid_country_ids, true)) {
+        $errors['country_id'] = 'El país seleccionado no es válido.';
+    }
+    if ($old['city_id'] !== '' && !in_array((int)$old['city_id'], $valid_city_ids, true)) {
+        $errors['city_id'] = 'La ciudad seleccionada no es válida.';
+    }
+    $old['sectors']  = array_values(array_intersect($old['sectors'], $valid_sector_ids));
+    $old['services'] = array_values(array_intersect($old['services'], $valid_service_ids));
+    if (!empty($_POST['sectors']) && empty($old['sectors'])) {
+        $errors['sectors'] = 'Los sectores seleccionados no son válidos.';
+    }
 
     // Duplicate email
     if (!isset($errors['email'])) {
@@ -69,45 +94,51 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($i > 999) { $slug = $base . '-' . bin2hex(random_bytes(3)); break; }
         }
 
-        $user_id = DB::insert('users', [
-            'email' => $old['email'],
-            'password_hash' => password_hash($old['password'], PASSWORD_DEFAULT),
-            'role' => 'company',
-            'name' => $old['name'],
-            'status' => 'pending',
-            'notifications_opt_in' => $old['notifications_opt_in'],
-        ]);
-
         $primary_sector = !empty($old['sectors']) ? (int)$old['sectors'][0] : null;
-        $cid = DB::insert('companies', [
-            'user_id'      => $user_id,
-            'slug'         => $slug,
-            'name'         => $old['name'],
-            'description'  => $old['description'] ?: null,
-            'sector_id'    => $primary_sector,
-            'country_id'   => (int)$old['country_id'],
-            'city_id'      => $old['city_id'] !== '' ? (int)$old['city_id'] : null,
-            'founded_year' => $old['founded_year'] !== '' ? (int)$old['founded_year'] : null,
-            'website'      => $old['website'] ?: null,
-            'phone'        => $old['phone'] ?: null,
-            'email'        => $old['email'],
-            'verified'     => 0,
-            'visibility_email'    => $old['visibility_email'],
-            'visibility_website'  => $old['visibility_website'],
-            'visibility_phone'    => $old['visibility_phone'],
-            'notifications_opt_in'=> $old['notifications_opt_in'],
-            'status'       => 'pending',
-        ]);
 
-        // Sectores (M:N)
-        if (!empty($old['sectors'])) {
-            CompanyRepo::setSectors($cid, $old['sectors']);
-        }
-        // Servicios (M:N)
-        if (!empty($old['services'])) {
-            CompanyRepo::setServices($cid, $old['services']);
-        }
+        // user + company + relaciones M:N en UNA transacción: si algo falla, rollBack
+        // completo (nunca queda un user huérfano) y mensaje legible al usuario.
+        try {
+            DB::transaction(function () use ($old, $slug, $primary_sector) {
+                $user_id = DB::insert('users', [
+                    'email' => $old['email'],
+                    'password_hash' => password_hash($old['password'], PASSWORD_DEFAULT),
+                    'role' => 'company',
+                    'name' => $old['name'],
+                    'status' => 'pending',
+                    'notifications_opt_in' => $old['notifications_opt_in'],
+                ]);
 
+                $cid = DB::insert('companies', [
+                    'user_id'      => $user_id,
+                    'slug'         => $slug,
+                    'name'         => $old['name'],
+                    'description'  => $old['description'] ?: null,
+                    'sector_id'    => $primary_sector,
+                    'country_id'   => (int)$old['country_id'],
+                    'city_id'      => $old['city_id'] !== '' ? (int)$old['city_id'] : null,
+                    'founded_year' => $old['founded_year'] !== '' ? (int)$old['founded_year'] : null,
+                    'website'      => $old['website'] ?: null,
+                    'phone'        => $old['phone'] ?: null,
+                    'email'        => $old['email'],
+                    'verified'     => 0,
+                    'visibility_email'    => $old['visibility_email'],
+                    'visibility_website'  => $old['visibility_website'],
+                    'visibility_phone'    => $old['visibility_phone'],
+                    'notifications_opt_in'=> $old['notifications_opt_in'],
+                    'status'       => 'pending',
+                ]);
+
+                if (!empty($old['sectors']))  CompanyRepo::setSectors($cid, $old['sectors']);
+                if (!empty($old['services'])) CompanyRepo::setServices($cid, $old['services']);
+            });
+        } catch (\Throwable $e) {
+            error_log('[registro-organizacion.php] fallo al crear organización: ' . $e->getMessage());
+            $errors['general'] = 'No pudimos completar el registro por un problema técnico. No se creó ninguna cuenta; por favor inténtalo de nuevo.';
+        }
+    }
+
+    if (!$errors) {
         $submitted_ok = true;
         $old = [
             'name'=>'','email'=>'','description'=>'','sectors'=>[],'services'=>[],'country_id'=>'',
@@ -118,12 +149,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         ];
     }
 }
-
-$sectors     = SectionRepo::sectors();
-$companyServices = SectionRepo::companyServices();
-$countries   = SectionRepo::countries();
-$departments = SectionRepo::departments();
-$cities      = SectionRepo::cities();
 
 // Paraguay preseleccionado por defecto
 $default_country_id = (int)(DB::one("SELECT id FROM countries WHERE slug = 'paraguay'")['id'] ?? 0);

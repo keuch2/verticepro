@@ -19,6 +19,17 @@ $old = [
 ];
 $submitted_ok = false;
 
+// Datos de referencia: antes del handler POST para validar FKs server-side (whitelist).
+$sectors         = SectionRepo::sectors();
+$companyServices = SectionRepo::companyServices();
+$countries       = SectionRepo::countries();
+$departments     = SectionRepo::departments();
+$cities          = SectionRepo::cities();
+$valid_sector_ids  = array_map(fn($r) => (int)$r['id'], $sectors);
+$valid_service_ids = array_map(fn($r) => (int)$r['id'], $companyServices);
+$valid_country_ids = array_map(fn($r) => (int)$r['id'], $countries);
+$valid_city_ids    = array_map(fn($r) => (int)$r['id'], $cities);
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     csrf_check();
 
@@ -38,10 +49,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $old['notifications_opt_in']= !empty($_POST['notifications_opt_in']) ? 1 : 0;
 
     if ($old['name'] === '')         $errors['name'] = 'Indica el nombre de la organización.';
+    elseif (mb_strlen($old['name']) > 150) $errors['name'] = 'El nombre no puede superar los 150 caracteres.';
     if ($old['country_id'] === '')   $errors['country_id'] = 'Selecciona un país.';
     if (empty($old['sectors']))      $errors['sectors'] = 'Selecciona al menos un sector.';
-
+    if ($old['description'] !== '' && mb_strlen($old['description']) > 2000) $errors['description'] = 'La descripción no puede superar los 2000 caracteres.';
     if ($old['website'] !== '' && !preg_match('#^https?://#i', $old['website'])) $errors['website'] = 'Debe empezar con http(s)://';
+    if ($old['founded_year'] !== '' && (!ctype_digit($old['founded_year']) || (int)$old['founded_year'] < 1800 || (int)$old['founded_year'] > (int)date('Y'))) {
+        $errors['founded_year'] = 'Año inválido.';
+    }
+
+    // Validar server-side que las FK existan (whitelist).
+    if ($old['country_id'] !== '' && !in_array((int)$old['country_id'], $valid_country_ids, true)) {
+        $errors['country_id'] = 'El país seleccionado no es válido.';
+    }
+    if ($old['city_id'] !== '' && !in_array((int)$old['city_id'], $valid_city_ids, true)) {
+        $errors['city_id'] = 'La ciudad seleccionada no es válida.';
+    }
+    $old['sectors']  = array_values(array_intersect($old['sectors'], $valid_sector_ids));
+    $old['services'] = array_values(array_intersect($old['services'], $valid_service_ids));
+    if (!empty($_POST['sectors']) && empty($old['sectors'])) {
+        $errors['sectors'] = 'Los sectores seleccionados no son válidos.';
+    }
 
     if (!$errors) {
         $base = slugify($old['name']) ?: 'empresa';
@@ -52,39 +80,41 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         $primary_sector = !empty($old['sectors']) ? (int)$old['sectors'][0] : null;
-        // Email: reutilizamos el del user.
-        $cid = DB::insert('companies', [
-            'user_id'      => (int)$u['id'],
-            'slug'         => $slug,
-            'name'         => $old['name'],
-            'description'  => $old['description'] ?: null,
-            'sector_id'    => $primary_sector,
-            'country_id'   => (int)$old['country_id'],
-            'city_id'      => $old['city_id'] !== '' ? (int)$old['city_id'] : null,
-            'founded_year' => $old['founded_year'] !== '' ? (int)$old['founded_year'] : null,
-            'website'      => $old['website'] ?: null,
-            'phone'        => $old['phone'] ?: null,
-            'email'        => $u['email'],
-            'verified'     => 0,
-            'visibility_email'    => $old['visibility_email'],
-            'visibility_website'  => $old['visibility_website'],
-            'visibility_phone'    => $old['visibility_phone'],
-            'notifications_opt_in'=> $old['notifications_opt_in'],
-            'status'       => 'pending',
-        ]);
 
-        if (!empty($old['sectors']))  CompanyRepo::setSectors($cid, $old['sectors']);
-        if (!empty($old['services'])) CompanyRepo::setServices($cid, $old['services']);
+        // company + relaciones M:N en UNA transacción: si algo falla, rollBack completo.
+        try {
+            DB::transaction(function () use ($u, $old, $slug, $primary_sector) {
+                $cid = DB::insert('companies', [
+                    'user_id'      => (int)$u['id'],
+                    'slug'         => $slug,
+                    'name'         => $old['name'],
+                    'description'  => $old['description'] ?: null,
+                    'sector_id'    => $primary_sector,
+                    'country_id'   => (int)$old['country_id'],
+                    'city_id'      => $old['city_id'] !== '' ? (int)$old['city_id'] : null,
+                    'founded_year' => $old['founded_year'] !== '' ? (int)$old['founded_year'] : null,
+                    'website'      => $old['website'] ?: null,
+                    'phone'        => $old['phone'] ?: null,
+                    'email'        => $u['email'],
+                    'verified'     => 0,
+                    'visibility_email'    => $old['visibility_email'],
+                    'visibility_website'  => $old['visibility_website'],
+                    'visibility_phone'    => $old['visibility_phone'],
+                    'notifications_opt_in'=> $old['notifications_opt_in'],
+                    'status'       => 'pending',
+                ]);
 
-        $submitted_ok = true;
+                if (!empty($old['sectors']))  CompanyRepo::setSectors($cid, $old['sectors']);
+                if (!empty($old['services'])) CompanyRepo::setServices($cid, $old['services']);
+            });
+            $submitted_ok = true;
+        } catch (\Throwable $e) {
+            error_log('[crear-organizacion.php] fallo al crear organización: ' . $e->getMessage());
+            $errors['general'] = 'No pudimos crear el perfil de organización por un problema técnico. Por favor inténtalo de nuevo.';
+        }
     }
 }
 
-$sectors         = SectionRepo::sectors();
-$companyServices = SectionRepo::companyServices();
-$countries       = SectionRepo::countries();
-$departments     = SectionRepo::departments();
-$cities          = SectionRepo::cities();
 $default_country_id = (int)(DB::one("SELECT id FROM countries WHERE slug = 'paraguay'")['id'] ?? 0);
 $selected_country = $old['country_id'] !== '' ? (int)$old['country_id'] : $default_country_id;
 

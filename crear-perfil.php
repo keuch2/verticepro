@@ -19,6 +19,14 @@ $old = [
 ];
 $submitted_ok = false;
 
+// Datos de referencia: antes del handler POST para validar FKs server-side (whitelist).
+$cities      = SectionRepo::cities();
+$types       = SectionRepo::profTypes();
+$disciplines = SectionRepo::disciplines();
+$valid_city_ids       = array_map(fn($r) => (int)$r['id'], $cities);
+$valid_type_ids       = array_map(fn($r) => (int)$r['id'], $types);
+$valid_discipline_ids = array_map(fn($r) => (int)$r['id'], $disciplines);
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     csrf_check();
     foreach (['name','title','specialties','bio','linkedin','website','phone'] as $k) $old[$k] = trim($_POST[$k] ?? '');
@@ -30,10 +38,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     if ($old['name'] === '')           $errors['name'] = 'Indica tu nombre completo.';
+    elseif (mb_strlen($old['name']) > 150) $errors['name'] = 'El nombre no puede superar los 150 caracteres.';
     if ($old['title'] === '')          $errors['title'] = 'Indica tu título o cargo.';
+    elseif (mb_strlen($old['title']) > 200) $errors['title'] = 'El título no puede superar los 200 caracteres.';
     if (empty($old['disciplines']))    $errors['disciplines'] = 'Selecciona al menos una disciplina.';
     if ($old['linkedin'] !== '' && !preg_match('#^https?://#i', $old['linkedin'])) $errors['linkedin'] = 'Debe empezar con http(s)://';
     if ($old['website']  !== '' && !preg_match('#^https?://#i', $old['website']))  $errors['website']  = 'Debe empezar con http(s)://';
+
+    // Validar server-side que las FK existan (whitelist).
+    if ($old['city_id'] !== '' && !in_array((int)$old['city_id'], $valid_city_ids, true)) {
+        $errors['city_id'] = 'La ciudad seleccionada no es válida.';
+    }
+    $old['types']       = array_values(array_intersect($old['types'], $valid_type_ids));
+    $old['disciplines'] = array_values(array_intersect($old['disciplines'], $valid_discipline_ids));
+    if (!empty($_POST['disciplines']) && empty($old['disciplines'])) {
+        $errors['disciplines'] = 'Las disciplinas seleccionadas no son válidas.';
+    }
 
     if (!$errors) {
         $base = slugify($old['name']) ?: 'profesional';
@@ -51,45 +71,49 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         $primary_type = !empty($old['types']) ? (int)$old['types'][0] : null;
 
-        $pid = DB::insert('professionals', [
-            'user_id'  => (int)$u['id'],
-            'slug'     => $slug,
-            'name'     => $old['name'],
-            'title'    => $old['title'],
-            'bio'      => $old['bio'] ?: null,
-            'city_id'  => $old['city_id'] !== '' ? (int)$old['city_id'] : null,
-            'type_id'  => $primary_type,
-            'avatar_image' => $avatar,
-            'email'    => $u['email'],
-            'linkedin' => $old['linkedin'] ?: null,
-            'website'  => $old['website']  ?: null,
-            'phone'    => $old['phone']    ?: null,
-            'verified' => 0,
-            'available'=> 1,
-            'featured' => 0,
-            'visibility_email'    => $old['visibility_email'],
-            'visibility_linkedin' => $old['visibility_linkedin'],
-            'visibility_website'  => $old['visibility_website'],
-            'visibility_phone'    => $old['visibility_phone'],
-            'notifications_opt_in'=> $old['notifications_opt_in'],
-            'status'   => 'pending',
-        ]);
+        // professional + relaciones M:N en UNA transacción: si algo falla, rollBack
+        // completo (no queda un perfil a medias sin disciplinas) y mensaje legible.
+        try {
+            DB::transaction(function () use ($u, $old, $slug, $avatar, $primary_type) {
+                $pid = DB::insert('professionals', [
+                    'user_id'  => (int)$u['id'],
+                    'slug'     => $slug,
+                    'name'     => $old['name'],
+                    'title'    => $old['title'],
+                    'bio'      => $old['bio'] ?: null,
+                    'city_id'  => $old['city_id'] !== '' ? (int)$old['city_id'] : null,
+                    'type_id'  => $primary_type,
+                    'avatar_image' => $avatar,
+                    'email'    => $u['email'],
+                    'linkedin' => $old['linkedin'] ?: null,
+                    'website'  => $old['website']  ?: null,
+                    'phone'    => $old['phone']    ?: null,
+                    'verified' => 0,
+                    'available'=> 1,
+                    'featured' => 0,
+                    'visibility_email'    => $old['visibility_email'],
+                    'visibility_linkedin' => $old['visibility_linkedin'],
+                    'visibility_website'  => $old['visibility_website'],
+                    'visibility_phone'    => $old['visibility_phone'],
+                    'notifications_opt_in'=> $old['notifications_opt_in'],
+                    'status'   => 'pending',
+                ]);
 
-        if (!empty($old['types']))       ProfessionalRepo::setTypes($pid, $old['types']);
-        foreach ($old['disciplines'] as $did) {
-            if ($did > 0) { try { DB::insert('professional_disciplines', ['professional_id' => $pid, 'discipline_id' => $did]); } catch (\Throwable $e) {} }
+                if (!empty($old['types'])) ProfessionalRepo::setTypes($pid, $old['types']);
+                foreach ($old['disciplines'] as $did) {
+                    if ($did > 0) DB::insert('professional_disciplines', ['professional_id' => $pid, 'discipline_id' => $did]);
+                }
+                foreach (array_filter(array_map('trim', explode(',', $old['specialties']))) as $s) {
+                    DB::insert('professional_specialties', ['professional_id' => $pid, 'specialty' => mb_substr($s, 0, 100)]);
+                }
+            });
+            $submitted_ok = true;
+        } catch (\Throwable $e) {
+            error_log('[crear-perfil.php] fallo al crear perfil: ' . $e->getMessage());
+            $errors['general'] = 'No pudimos crear tu perfil por un problema técnico. Por favor inténtalo de nuevo.';
         }
-        foreach (array_filter(array_map('trim', explode(',', $old['specialties']))) as $s) {
-            try { DB::insert('professional_specialties', ['professional_id' => $pid, 'specialty' => $s]); } catch (\Throwable $e) {}
-        }
-
-        $submitted_ok = true;
     }
 }
-
-$cities      = SectionRepo::cities();
-$types       = SectionRepo::profTypes();
-$disciplines = SectionRepo::disciplines();
 
 $page_title = 'Crear mi perfil profesional — Vértice Pro';
 $page_active = 'crear-perfil.php';

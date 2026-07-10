@@ -43,6 +43,28 @@ class DB {
         return (int) self::pdo()->lastInsertId();
     }
 
+    /**
+     * Ejecuta $fn dentro de una transacción. Si $fn lanza, se hace rollBack y se
+     * re-lanza la excepción (el caller decide cómo presentar el error). Si termina
+     * bien, se hace commit. Devuelve lo que devuelva $fn.
+     *
+     * Soporta anidamiento: sólo la transacción más externa hace el begin/commit real;
+     * las internas comparten esa transacción (evita "There is already an active transaction").
+     */
+    public static function transaction(callable $fn) {
+        $pdo = self::pdo();
+        $outermost = !$pdo->inTransaction();
+        if ($outermost) $pdo->beginTransaction();
+        try {
+            $result = $fn();
+            if ($outermost) $pdo->commit();
+            return $result;
+        } catch (\Throwable $e) {
+            if ($outermost && $pdo->inTransaction()) $pdo->rollBack();
+            throw $e;
+        }
+    }
+
     public static function update(string $table, array $data, array $where): int {
         $sets = array_map(fn($c) => "$c = :$c", array_keys($data));
         $whereParts = [];
