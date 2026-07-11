@@ -36,23 +36,43 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     $prev_status = $p['status'] ?? null;
-    if ($is_new) { $id = DB::insert('professionals', $data); flash('ok','Profesional creado'); }
-    else         { DB::update('professionals', $data, ['id'=>$id]); flash('ok','Profesional actualizado'); }
+    // Aprobación = cualquier transición HACIA 'active' (pending->active o suspended->active).
+    $is_approval = !$is_new && $prev_status !== 'active' && $data['status'] === 'active';
 
-    // Aprobación: activar también el users vinculado + notificar al profesional
-    if (!$is_new && $prev_status === 'pending' && $data['status'] === 'active') {
+    // El perfil y el status del user vinculado se escriben en UNA transacción, para
+    // que nunca queden desincronizados (perfil active pero user pending = no puede loguear).
+    DB::transaction(function () use (&$id, $is_new, $data, $p) {
+        if ($is_new) {
+            $id = DB::insert('professionals', $data);
+        } else {
+            DB::update('professionals', $data, ['id' => $id]);
+            // Al aprobar/reactivar, activar el user vinculado y mantener su email en sync.
+            if ($p && !empty($p['user_id'])) {
+                $user_patch = [];
+                if ($data['status'] === 'active') $user_patch['status'] = 'active';
+                if (!empty($data['email']))       $user_patch['email']  = $data['email'];
+                if ($user_patch) DB::update('users', $user_patch, ['id' => (int)$p['user_id']]);
+            }
+        }
+    });
+    flash('ok', $is_new ? 'Profesional creado' : 'Profesional actualizado');
+
+    // Notificación al profesional: FUERA de la transacción y a prueba de fallos,
+    // para que un problema de correo nunca revierta la aprobación.
+    if ($is_approval) {
         $fresh = ProfessionalRepo::find($id);
         if ($fresh) {
-            if (!empty($fresh['user_id'])) {
-                DB::update('users', ['status' => 'active'], ['id' => (int)$fresh['user_id']]);
-            }
             $link = u('/mi-perfil');
             $title = '¡Tu perfil profesional fue aprobado!';
             $body  = "Buenas noticias, " . $fresh['name'] . ". Tu perfil en la Red Vértice Pro acaba de ser aprobado y ya es visible en el directorio. Ya puedes iniciar sesión con tu email y la contraseña que elegiste al registrarte para editar tu perfil.";
-            if (!empty($fresh['user_id'])) {
-                Notify::create((int)$fresh['user_id'], 'profile_approved', $title, $body, $link, $fresh['email']);
-            } elseif (!empty($fresh['email'])) {
-                Notify::emailOnly($fresh['email'], $fresh['name'], (int)($fresh['notifications_opt_in'] ?? 1), $title, $body, $link);
+            try {
+                if (!empty($fresh['user_id'])) {
+                    Notify::create((int)$fresh['user_id'], 'profile_approved', $title, $body, $link, $fresh['email']);
+                } elseif (!empty($fresh['email'])) {
+                    Notify::emailOnly($fresh['email'], $fresh['name'], (int)($fresh['notifications_opt_in'] ?? 1), $title, $body, $link);
+                }
+            } catch (\Throwable $e) {
+                error_log('[admin/profesionales/edit.php] fallo al notificar aprobación: ' . $e->getMessage());
             }
         }
     }

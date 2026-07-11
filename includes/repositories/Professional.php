@@ -73,25 +73,31 @@ class ProfessionalRepo {
 
     /** Reemplaza la lista de tipos del profesional. El primero pasa a ser primario. */
     public static function setTypes(int $id, array $type_ids): void {
-        DB::run('DELETE FROM professional_type_links WHERE professional_id = ?', [$id]);
-        $first = true;
-        foreach (array_unique(array_map('intval', $type_ids)) as $tid) {
-            if ($tid <= 0) continue;
-            try {
-                DB::insert('professional_type_links', [
-                    'professional_id' => $id,
-                    'type_id'         => $tid,
-                    'is_primary'      => $first ? 1 : 0,
-                ]);
-                if ($first) {
-                    DB::update('professionals', ['type_id' => $tid], ['id' => $id]);
-                    $first = false;
+        // DELETE + re-INSERT atómico (anidable: comparte la transacción del caller si existe).
+        DB::transaction(function () use ($id, $type_ids) {
+            DB::run('DELETE FROM professional_type_links WHERE professional_id = ?', [$id]);
+            $first = true;
+            foreach (array_unique(array_map('intval', $type_ids)) as $tid) {
+                if ($tid <= 0) continue;
+                try {
+                    DB::insert('professional_type_links', [
+                        'professional_id' => $id,
+                        'type_id'         => $tid,
+                        'is_primary'      => $first ? 1 : 0,
+                    ]);
+                    if ($first) {
+                        DB::update('professionals', ['type_id' => $tid], ['id' => $id]);
+                        $first = false;
+                    }
+                } catch (\Throwable $e) {
+                    // id de tipo inválido: se registra en vez de tragarse en silencio.
+                    error_log('[ProfessionalRepo::setTypes] type_id inválido ' . $tid . ' para profesional ' . $id . ': ' . $e->getMessage());
                 }
-            } catch (\Throwable $e) {}
-        }
-        if ($first) {
-            // Sin tipos seleccionados, limpiar el cache
-            DB::update('professionals', ['type_id' => null], ['id' => $id]);
-        }
+            }
+            if ($first) {
+                // Sin tipos válidos, limpiar el cache
+                DB::update('professionals', ['type_id' => null], ['id' => $id]);
+            }
+        });
     }
 }

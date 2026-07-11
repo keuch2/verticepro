@@ -295,6 +295,8 @@ function tab_link_emp(string $t, string $current, string $label, ?int $count = n
     <div>
       <?php $current_sectors = CompanyRepo::sectorIds((int)$c['id']); ?>
       <label class="block text-sm font-semibold mb-2">Sectores</label>
+      <!-- Centinela: garantiza que 'sectors' llegue en el POST aunque se desmarquen todos (permite limpiar). -->
+      <input type="hidden" name="sectors[]" value="" />
       <div class="grid grid-cols-2 md:grid-cols-3 gap-2">
         <?php foreach ($sectors as $s): $checked = in_array((int)$s['id'], $current_sectors, true); ?>
           <label class="flex items-center gap-2 border <?= $checked ? 'border-naranja bg-naranja/5' : 'border-gray-200' ?> rounded px-3 py-2 cursor-pointer hover:border-naranja transition text-sm">
@@ -308,6 +310,8 @@ function tab_link_emp(string $t, string $current, string $label, ?int $count = n
     <div>
       <?php $current_services = CompanyRepo::serviceIds((int)$c['id']); ?>
       <label class="block text-sm font-semibold mb-2">Servicios que ofrecemos</label>
+      <!-- Centinela: garantiza que 'services' llegue en el POST aunque se desmarquen todos. -->
+      <input type="hidden" name="services[]" value="" />
       <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
         <?php foreach ($companyServices as $sv): $checked = in_array((int)$sv['id'], $current_services, true); ?>
           <label class="flex items-start gap-2 border <?= $checked ? 'border-naranja bg-naranja/5' : 'border-gray-200' ?> rounded px-3 py-2 cursor-pointer hover:border-naranja transition text-sm">

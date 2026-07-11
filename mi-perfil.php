@@ -80,16 +80,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             case 'save_disciplinas':
                 $ids = array_map('intval', (array)($_POST['disciplines'] ?? []));
                 $specs = array_filter(array_map('trim', explode(',', $_POST['specialties'] ?? '')));
+                DB::transaction(function () use ($p, $ids, $specs) {
                 DB::run('DELETE FROM professional_disciplines WHERE professional_id = ?', [(int)$p['id']]);
                 foreach ($ids as $did) {
                     if ($did > 0) {
-                        try { DB::insert('professional_disciplines', ['professional_id' => (int)$p['id'], 'discipline_id' => $did]); } catch (\Throwable $e) {}
+                        try { DB::insert('professional_disciplines', ['professional_id' => (int)$p['id'], 'discipline_id' => $did]); }
+                        catch (\Throwable $e) { error_log('[mi-perfil.php] discipline_id inválido ' . $did . ': ' . $e->getMessage()); }
                     }
                 }
                 DB::run('DELETE FROM professional_specialties WHERE professional_id = ?', [(int)$p['id']]);
                 foreach ($specs as $s) {
-                    try { DB::insert('professional_specialties', ['professional_id' => (int)$p['id'], 'specialty' => $s]); } catch (\Throwable $e) {}
+                    try { DB::insert('professional_specialties', ['professional_id' => (int)$p['id'], 'specialty' => mb_substr($s, 0, 100)]); }
+                    catch (\Throwable $e) { error_log('[mi-perfil.php] especialidad inválida: ' . $e->getMessage()); }
                 }
+                });
                 $ok = 'Disciplinas y especialidades actualizadas.';
                 $tab = 'disciplinas';
                 break;
@@ -333,6 +337,8 @@ function tab_link(string $t, string $current, string $label, ?int $count = null)
     <?php $current_types = ProfessionalRepo::typeIds((int)$p['id']); ?>
     <div>
       <label class="block text-sm font-semibold mb-2">Tipo(s) de profesional</label>
+      <!-- Centinela: garantiza que 'types' llegue en el POST aunque se desmarquen todos (permite limpiar). -->
+      <input type="hidden" name="types[]" value="" />
       <div class="grid grid-cols-2 md:grid-cols-3 gap-2">
         <?php foreach ($types as $t): $checked = in_array((int)$t['id'], $current_types, true); ?>
           <label class="flex items-center gap-2 border <?= $checked ? 'border-naranja bg-naranja/5' : 'border-gray-200' ?> rounded px-3 py-2 cursor-pointer hover:border-naranja transition text-sm">

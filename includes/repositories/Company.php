@@ -39,23 +39,28 @@ class CompanyRepo {
     }
 
     public static function setSectors(int $id, array $sector_ids): void {
-        DB::run('DELETE FROM company_sector_links WHERE company_id = ?', [$id]);
-        $first = true;
-        foreach (array_unique(array_map('intval', $sector_ids)) as $sid) {
-            if ($sid <= 0) continue;
-            try {
-                DB::insert('company_sector_links', [
-                    'company_id' => $id,
-                    'sector_id'  => $sid,
-                    'is_primary' => $first ? 1 : 0,
-                ]);
-                if ($first) {
-                    DB::update('companies', ['sector_id' => $sid], ['id' => $id]);
-                    $first = false;
+        // DELETE + re-INSERT atómico (anidable: comparte la transacción del caller si existe).
+        DB::transaction(function () use ($id, $sector_ids) {
+            DB::run('DELETE FROM company_sector_links WHERE company_id = ?', [$id]);
+            $first = true;
+            foreach (array_unique(array_map('intval', $sector_ids)) as $sid) {
+                if ($sid <= 0) continue;
+                try {
+                    DB::insert('company_sector_links', [
+                        'company_id' => $id,
+                        'sector_id'  => $sid,
+                        'is_primary' => $first ? 1 : 0,
+                    ]);
+                    if ($first) {
+                        DB::update('companies', ['sector_id' => $sid], ['id' => $id]);
+                        $first = false;
+                    }
+                } catch (\Throwable $e) {
+                    error_log('[CompanyRepo::setSectors] sector_id inválido ' . $sid . ' para organización ' . $id . ': ' . $e->getMessage());
                 }
-            } catch (\Throwable $e) {}
-        }
-        if ($first) DB::update('companies', ['sector_id' => null], ['id' => $id]);
+            }
+            if ($first) DB::update('companies', ['sector_id' => null], ['id' => $id]);
+        });
     }
 
     public static function services(int $id): array {
@@ -75,12 +80,17 @@ class CompanyRepo {
     }
 
     public static function setServices(int $id, array $service_ids): void {
-        DB::run('DELETE FROM company_service_links WHERE company_id = ?', [$id]);
-        foreach (array_unique(array_map('intval', $service_ids)) as $sid) {
-            if ($sid <= 0) continue;
-            try {
-                DB::insert('company_service_links', ['company_id' => $id, 'service_id' => $sid]);
-            } catch (\Throwable $e) {}
-        }
+        // DELETE + re-INSERT atómico (anidable: comparte la transacción del caller si existe).
+        DB::transaction(function () use ($id, $service_ids) {
+            DB::run('DELETE FROM company_service_links WHERE company_id = ?', [$id]);
+            foreach (array_unique(array_map('intval', $service_ids)) as $sid) {
+                if ($sid <= 0) continue;
+                try {
+                    DB::insert('company_service_links', ['company_id' => $id, 'service_id' => $sid]);
+                } catch (\Throwable $e) {
+                    error_log('[CompanyRepo::setServices] service_id inválido ' . $sid . ' para organización ' . $id . ': ' . $e->getMessage());
+                }
+            }
+        });
     }
 }

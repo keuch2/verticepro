@@ -2,7 +2,9 @@
 require_once __DIR__ . '/includes/bootstrap.php';
 require_once __DIR__ . '/includes/auth_public.php';
 
-if (session_status() !== PHP_SESSION_ACTIVE) session_start();
+// Usar el mismo nombre/params de sesión que auth.php (no el PHPSESSID por defecto),
+// para que la sesión creada al loguear sea la misma que auth_user() luego lee.
+session_start_admin();
 
 // Si ya está logueado, redirigir a su área
 $u = auth_user();
@@ -23,9 +25,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($email === '' || $password === '') {
         $errors[] = 'Ingresa tu email y contraseña.';
     } else {
-        $user = auth_login($email, $password);
+        $res = auth_login_ex($email, $password);
+        $user = $res['user'];
         if (!$user) {
-            $errors[] = 'Credenciales incorrectas o cuenta no activa.';
+            switch ($res['reason']) {
+                case 'rate_limited':
+                    $errors[] = 'Demasiados intentos fallidos. Espera unos minutos e inténtalo de nuevo.';
+                    break;
+                case 'pending':
+                    $errors[] = 'Tu cuenta todavía está pendiente de aprobación. Te avisaremos por email cuando esté activa y podrás iniciar sesión.';
+                    break;
+                case 'suspended':
+                    $errors[] = 'Tu cuenta está suspendida. Escríbenos si crees que es un error.';
+                    break;
+                default:
+                    $errors[] = 'Credenciales incorrectas.';
+            }
         } else {
             $back = $_SESSION['login_back_to'] ?? null;
             unset($_SESSION['login_back_to']);

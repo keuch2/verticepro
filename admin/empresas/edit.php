@@ -28,23 +28,43 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     $prev_status = $c['status'] ?? null;
-    if ($is_new) { $id = DB::insert('companies', $data); flash('ok','Organización creada'); }
-    else         { DB::update('companies', $data, ['id'=>$id]); flash('ok','Organización actualizada'); }
+    // Aprobación = cualquier transición HACIA 'active' (pending->active o suspended->active).
+    $is_approval = !$is_new && $prev_status !== 'active' && $data['status'] === 'active';
 
-    // Aprobación: activar también el users vinculado + notificar a la empresa
-    if (!$is_new && $prev_status === 'pending' && $data['status'] === 'active') {
-        $fresh = CompanyRepo::find($id);
-        if ($fresh && !empty($fresh['email'])) {
-            if (!empty($fresh['user_id'])) {
-                DB::update('users', ['status' => 'active'], ['id' => (int)$fresh['user_id']]);
+    // Organización + status del user vinculado en UNA transacción (nunca desincronizados).
+    DB::transaction(function () use (&$id, $is_new, $data, $c) {
+        if ($is_new) {
+            $id = DB::insert('companies', $data);
+        } else {
+            DB::update('companies', $data, ['id' => $id]);
+            // Activar el user vinculado aunque la organización no tenga email; sincronizar email.
+            if ($c && !empty($c['user_id'])) {
+                $user_patch = [];
+                if ($data['status'] === 'active') $user_patch['status'] = 'active';
+                if (!empty($data['email']))       $user_patch['email']  = $data['email'];
+                if ($user_patch) DB::update('users', $user_patch, ['id' => (int)$c['user_id']]);
             }
+        }
+        // Mantener la M:N de sectores sincronizada con el sector primario elegido.
+        if (!empty($data['sector_id'])) CompanyRepo::setSectors((int)$id, [(int)$data['sector_id']]);
+    });
+    flash('ok', $is_new ? 'Organización creada' : 'Organización actualizada');
+
+    // Notificación: FUERA de la transacción y a prueba de fallos.
+    if ($is_approval) {
+        $fresh = CompanyRepo::find($id);
+        if ($fresh) {
             $link = u('/mi-organizacion');
             $title = '¡Tu organización fue aprobada en Vértice Pro!';
             $body  = "Buenas noticias. La organización " . $fresh['name'] . " acaba de ser aprobada y ya es visible en el directorio de organizaciones. Ya puedes iniciar sesión con tu email y contraseña para editar el perfil de la organización y publicar ofertas.";
-            if (!empty($fresh['user_id'])) {
-                Notify::create((int)$fresh['user_id'], 'profile_approved', $title, $body, $link, $fresh['email']);
-            } else {
-                Notify::emailOnly($fresh['email'], $fresh['name'], (int)($fresh['notifications_opt_in'] ?? 1), $title, $body, $link);
+            try {
+                if (!empty($fresh['user_id'])) {
+                    Notify::create((int)$fresh['user_id'], 'profile_approved', $title, $body, $link, $fresh['email']);
+                } elseif (!empty($fresh['email'])) {
+                    Notify::emailOnly($fresh['email'], $fresh['name'], (int)($fresh['notifications_opt_in'] ?? 1), $title, $body, $link);
+                }
+            } catch (\Throwable $e) {
+                error_log('[admin/empresas/edit.php] fallo al notificar aprobación: ' . $e->getMessage());
             }
         }
     }

@@ -5,6 +5,7 @@ require_once __DIR__ . '/includes/auth_public.php';
 if (session_status() !== PHP_SESSION_ACTIVE) session_start();
 
 $sent = false;
+$pending = false;
 $err = null;
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -21,34 +22,49 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (!$user) {
             $prof = DB::one('SELECT id, name, email FROM professionals WHERE email = ? AND status = "active" LIMIT 1', [$email]);
             $comp = DB::one('SELECT id, name, email FROM companies WHERE email = ? AND status = "active" LIMIT 1', [$email]);
-            if ($prof) {
-                $uid = DB::insert('users', [
-                    'email' => $prof['email'],
-                    'password_hash' => password_hash(bin2hex(random_bytes(16)), PASSWORD_DEFAULT),
-                    'role' => 'professional',
-                    'name' => $prof['name'],
-                    'status' => 'active',
-                ]);
-                DB::update('professionals', ['user_id' => $uid], ['id' => $prof['id']]);
-                $user = DB::one('SELECT id, name, email, role, status FROM users WHERE id = ?', [$uid]);
-            } elseif ($comp) {
-                $uid = DB::insert('users', [
-                    'email' => $comp['email'],
-                    'password_hash' => password_hash(bin2hex(random_bytes(16)), PASSWORD_DEFAULT),
-                    'role' => 'company',
-                    'name' => $comp['name'],
-                    'status' => 'active',
-                ]);
-                DB::update('companies', ['user_id' => $uid], ['id' => $comp['id']]);
-                $user = DB::one('SELECT id, name, email, role, status FROM users WHERE id = ?', [$uid]);
+            try {
+                if ($prof) {
+                    $uid = DB::transaction(function () use ($prof) {
+                        $uid = DB::insert('users', [
+                            'email' => $prof['email'],
+                            'password_hash' => password_hash(bin2hex(random_bytes(16)), PASSWORD_DEFAULT),
+                            'role' => 'professional',
+                            'name' => $prof['name'],
+                            'status' => 'active',
+                        ]);
+                        DB::update('professionals', ['user_id' => $uid], ['id' => $prof['id']]);
+                        return $uid;
+                    });
+                    $user = DB::one('SELECT id, name, email, role, status FROM users WHERE id = ?', [$uid]);
+                } elseif ($comp) {
+                    $uid = DB::transaction(function () use ($comp) {
+                        $uid = DB::insert('users', [
+                            'email' => $comp['email'],
+                            'password_hash' => password_hash(bin2hex(random_bytes(16)), PASSWORD_DEFAULT),
+                            'role' => 'company',
+                            'name' => $comp['name'],
+                            'status' => 'active',
+                        ]);
+                        DB::update('companies', ['user_id' => $uid], ['id' => $comp['id']]);
+                        return $uid;
+                    });
+                    $user = DB::one('SELECT id, name, email, role, status FROM users WHERE id = ?', [$uid]);
+                }
+            } catch (\Throwable $e) {
+                // Carrera: el user pudo haberse creado entre el SELECT y el INSERT (email UNIQUE).
+                error_log('[recuperar-password.php] reclamar perfil falló, reintentando por email: ' . $e->getMessage());
+                $user = DB::one('SELECT id, name, email, role, status FROM users WHERE email = ? LIMIT 1', [$email]);
             }
         }
 
-        // Solo enviamos si el user existe y está activo. Pero al usuario siempre le mostramos "enviado".
-        if ($user && $user['status'] === 'active') {
+        // Cuenta pendiente de aprobación: no hay password que resetear todavía.
+        // Se lo decimos claramente (la persona ya sabe que se registró; no filtra info nueva).
+        if ($user && $user['status'] === 'pending') {
+            $pending = true;
+        } elseif ($user && $user['status'] === 'active') {
             $token = password_reset_create((int)$user['id'], 60);
             $link = u('/restablecer-password?t=' . $token);
-            Notify::emailOnly(
+            $ok = Notify::emailOnly(
                 $user['email'],
                 $user['name'],
                 1,
@@ -56,7 +72,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 "Recibimos una solicitud para restablecer tu contraseña.\n\nHaz clic en el siguiente enlace (válido por 1 hora) para definir una nueva contraseña:",
                 $link
             );
+            if (!$ok) {
+                error_log('[recuperar-password.php] no se pudo enviar el email de reset a user ' . (int)$user['id']);
+            }
         }
+        // 'suspended' cae al mensaje genérico a propósito (no reactivamos por reset).
         $sent = true;
     }
 }
@@ -73,7 +93,12 @@ include __DIR__ . '/includes/header.php';
     <div class="bg-red-50 border border-coral text-coral rounded p-4 mt-6 text-sm"><?= e($err) ?></div>
   <?php endif; ?>
 
-  <?php if ($sent): ?>
+  <?php if ($pending): ?>
+    <div class="bg-naranja/10 border border-naranja rounded p-4 mt-6 text-texto">
+      Tu cuenta todavía está <strong>pendiente de aprobación</strong>. Cuando nuestro equipo la revise y active, te avisaremos por email y ya podrás iniciar sesión con la contraseña que elegiste al registrarte.
+    </div>
+    <div class="mt-4"><a href="<?= e(u('/login')) ?>" class="text-azul hover:underline">Volver al inicio de sesión</a></div>
+  <?php elseif ($sent): ?>
     <div class="bg-verde/10 border border-verde rounded p-4 mt-6 text-texto">
       Si el email coincide con una cuenta o perfil registrado, te enviamos un enlace. Revisa tu bandeja de entrada (y la carpeta de spam).
     </div>

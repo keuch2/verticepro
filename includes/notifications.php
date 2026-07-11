@@ -24,15 +24,23 @@ class Notify {
             'link'    => $link,
         ]);
 
-        // Send email if user opted in (and we have an address).
-        $user = DB::one('SELECT email, name, notifications_opt_in FROM users WHERE id = ?', [$user_id]);
-        if ($user && (int)$user['notifications_opt_in'] === 1) {
-            self::sendEmail($user['email'], $user['name'], $title, $body, $link);
-            DB::update('notifications', ['email_sent_at' => date('Y-m-d H:i:s')], ['id' => $id]);
-        } elseif ($email_to) {
-            // Fallback: send to an explicit address (used for pending registrants without user account).
-            self::sendEmail($email_to, '', $title, $body, $link);
-            DB::update('notifications', ['email_sent_at' => date('Y-m-d H:i:s')], ['id' => $id]);
+        // Send email if user opted in (and we have an address). Best-effort: un fallo de
+        // correo NUNCA debe abortar al caller (la notificación in-app ya quedó guardada).
+        // email_sent_at solo se marca si el envío realmente tuvo éxito.
+        try {
+            $user = DB::one('SELECT email, name, notifications_opt_in FROM users WHERE id = ?', [$user_id]);
+            $sent = false;
+            if ($user && (int)$user['notifications_opt_in'] === 1) {
+                $sent = self::sendEmail($user['email'], $user['name'], $title, $body, $link);
+            } elseif ($email_to) {
+                // Fallback: dirección explícita (registrantes públicos sin cuenta aún).
+                $sent = self::sendEmail($email_to, '', $title, $body, $link);
+            }
+            if ($sent) {
+                DB::update('notifications', ['email_sent_at' => date('Y-m-d H:i:s')], ['id' => $id]);
+            }
+        } catch (\Throwable $e) {
+            error_log('[Notify::create] fallo al enviar email de notificación #' . $id . ': ' . $e->getMessage());
         }
         return $id;
     }
@@ -112,7 +120,11 @@ class Notify {
         if ($smtp_on) {
             return self::sendSmtp($to, $from_email, $from_name, $subject, $msg);
         }
-        return @mail($to, self::encodeHeader($subject), $msg, implode("\r\n", $headers));
+        $ok = @mail($to, self::encodeHeader($subject), $msg, implode("\r\n", $headers));
+        if (!$ok) {
+            error_log('[Notify::sendEmail] mail() falló para ' . $to . ' | asunto: ' . $subject);
+        }
+        return $ok;
     }
 
     private static function encodeHeader(string $s): string {
